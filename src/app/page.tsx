@@ -453,36 +453,111 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
   );
 }
 
+/* ── Chat conversation type ── */
+
+type Conversation = {
+  id: number;
+  title: string;
+  messages: ChatMessage[];
+  timestamp: string;
+};
+
+/* ── Chat history panel ── */
+
+function ChatHistoryPanel({
+  conversations,
+  activeConvId,
+  onSelect,
+  onClose,
+}: {
+  conversations: Conversation[];
+  activeConvId: number;
+  onSelect: (id: number) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="absolute inset-0 z-30 flex flex-col bg-white animate-in">
+      <div className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--light-gray)] px-4">
+        <h2 className="text-base font-semibold text-[var(--text-primary)]">Chat history</h2>
+        <button type="button" aria-label="Close history" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)]">
+          <CloseSmallIcon />
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        {conversations.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--very-light-gray)] text-[var(--text-muted)]">
+              <MessageSquareIcon />
+            </div>
+            <p className="text-sm text-[var(--text-muted)]">No conversations yet</p>
+          </div>
+        ) : (
+          conversations.map((conv) => (
+            <button
+              key={conv.id}
+              type="button"
+              onClick={() => { onSelect(conv.id); onClose(); }}
+              className={`flex w-full flex-col gap-1 border-b border-[var(--light-gray)] px-4 py-3 text-left transition-colors hover:bg-[var(--very-light-gray)] ${
+                conv.id === activeConvId ? "bg-[var(--very-light-green)]" : ""
+              }`}
+            >
+              <span className="text-sm font-semibold text-[var(--text-primary)] line-clamp-1">{conv.title}</span>
+              <span className="text-xs text-[var(--text-muted)]">
+                {conv.messages.length} messages · {conv.timestamp}
+              </span>
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ── AI Chat View ── */
 
-function AIChatView({ onNewChat }: { onNewChat: boolean }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+function AIChatView({
+  conversations,
+  activeConvId,
+  onUpdateConversation,
+  showHistory,
+  onSelectConversation,
+  onCloseHistory,
+}: {
+  conversations: Conversation[];
+  activeConvId: number;
+  onUpdateConversation: (id: number, messages: ChatMessage[], title: string) => void;
+  showHistory: boolean;
+  onSelectConversation: (id: number) => void;
+  onCloseHistory: () => void;
+}) {
+  const activeConv = conversations.find((c) => c.id === activeConvId);
+  const messages = activeConv?.messages ?? [];
+
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const nextId = useRef(1);
+  const nextMsgId = useRef(1);
 
   useEffect(() => {
-    if (onNewChat) {
-      setMessages([]);
-      setInputText("");
-      setIsTyping(false);
-      setShowSuggestions(true);
-      nextId.current = 1;
-    }
-  }, [onNewChat]);
+    setInputText("");
+    setIsTyping(false);
+    setShowSuggestions(messages.length === 0);
+    nextMsgId.current = messages.length > 0 ? Math.max(...messages.map((m) => m.id)) + 1 : 1;
+  }, [activeConvId, messages.length]);
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
   }, []);
 
   function sendMessage(text: string) {
-    if (!text.trim()) return;
+    if (!text.trim() || isTyping) return;
 
-    const userMsg: ChatMessage = { id: nextId.current++, role: "user", text: text.trim() };
-    setMessages((prev) => [...prev, userMsg]);
+    const userMsg: ChatMessage = { id: nextMsgId.current++, role: "user", text: text.trim() };
+    const updatedMessages = [...messages, userMsg];
+    const title = messages.length === 0 ? text.trim().slice(0, 50) : (activeConv?.title ?? "New chat");
+    onUpdateConversation(activeConvId, updatedMessages, title);
     setInputText("");
     setShowSuggestions(false);
     setIsTyping(true);
@@ -492,8 +567,8 @@ function AIChatView({ onNewChat }: { onNewChat: boolean }) {
     const delay = 1200 + Math.random() * 800;
 
     setTimeout(() => {
-      const aiMsg: ChatMessage = { id: nextId.current++, role: "assistant", text: responseText };
-      setMessages((prev) => [...prev, aiMsg]);
+      const aiMsg: ChatMessage = { id: nextMsgId.current++, role: "assistant", text: responseText };
+      onUpdateConversation(activeConvId, [...updatedMessages, aiMsg], title);
       setIsTyping(false);
       scrollToBottom();
     }, delay);
@@ -511,14 +586,20 @@ function AIChatView({ onNewChat }: { onNewChat: boolean }) {
     }
   }
 
-  function handleSuggestionClick(text: string) {
-    sendMessage(text);
-  }
-
   const hasText = inputText.trim().length > 0;
 
   return (
-    <div className="flex flex-1 flex-col bg-white">
+    <div className="relative flex flex-1 flex-col bg-white">
+      {/* Chat history overlay */}
+      {showHistory && (
+        <ChatHistoryPanel
+          conversations={conversations}
+          activeConvId={activeConvId}
+          onSelect={onSelectConversation}
+          onClose={onCloseHistory}
+        />
+      )}
+
       {/* Messages area */}
       <div className="flex flex-1 flex-col justify-end overflow-y-auto">
         {messages.length === 0 && showSuggestions && (
@@ -529,7 +610,7 @@ function AIChatView({ onNewChat }: { onNewChat: boolean }) {
                   key={i}
                   type="button"
                   className="shrink-0 w-[164px] rounded-2xl bg-[var(--very-light-green)] px-2.5 py-2 text-left hover:opacity-90 active:scale-[0.98] transition-transform"
-                  onClick={() => handleSuggestionClick(text)}
+                  onClick={() => sendMessage(text)}
                 >
                   <span className="text-sm font-medium leading-[18px] text-[var(--brand-primary)]">
                     {text}
@@ -621,7 +702,13 @@ export default function InsightsPage() {
     date: null,
     athlete: null,
   });
-  const [newChatSignal, setNewChatSignal] = useState(false);
+
+  const [conversations, setConversations] = useState<Conversation[]>([
+    { id: 1, title: "New chat", messages: [], timestamp: "Now" },
+  ]);
+  const [activeConvId, setActiveConvId] = useState(1);
+  const [showChatHistory, setShowChatHistory] = useState(false);
+  const nextConvId = useRef(2);
 
   const hasActiveFilters = Object.values(activeFilters).some(Boolean);
 
@@ -634,8 +721,21 @@ export default function InsightsPage() {
   }
 
   function handleNewChat() {
-    setNewChatSignal(true);
-    setTimeout(() => setNewChatSignal(false), 100);
+    const newId = nextConvId.current++;
+    const newConv: Conversation = { id: newId, title: "New chat", messages: [], timestamp: "Now" };
+    setConversations((prev) => [newConv, ...prev]);
+    setActiveConvId(newId);
+    setShowChatHistory(false);
+  }
+
+  function handleUpdateConversation(id: number, messages: ChatMessage[], title: string) {
+    setConversations((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, messages, title } : c))
+    );
+  }
+
+  function handleSelectConversation(id: number) {
+    setActiveConvId(id);
   }
 
   return (
@@ -729,7 +829,16 @@ export default function InsightsPage() {
               <button type="button" aria-label="New chat" onClick={handleNewChat} className="flex h-[30px] w-[30px] items-center justify-center rounded border border-[var(--light-gray)] text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-transform">
                 <EditIcon />
               </button>
-              <button type="button" aria-label="Chat history" className="flex h-[30px] w-[30px] items-center justify-center rounded border border-[var(--light-gray)] text-[var(--text-primary)] hover:bg-[var(--very-light-gray)]">
+              <button
+                type="button"
+                aria-label="Chat history"
+                onClick={() => setShowChatHistory(!showChatHistory)}
+                className={`flex h-[30px] w-[30px] items-center justify-center rounded border transition-colors active:scale-95 ${
+                  showChatHistory
+                    ? "border-[var(--light-green)] bg-[var(--very-light-green)] text-[var(--light-green)]"
+                    : "border-[var(--light-gray)] text-[var(--text-primary)] hover:bg-[var(--very-light-gray)]"
+                }`}
+              >
                 <MessageSquareIcon />
               </button>
             </div>
@@ -745,7 +854,14 @@ export default function InsightsPage() {
             onClearFilters={handleClearFilters}
           />
         ) : (
-          <AIChatView onNewChat={newChatSignal} />
+          <AIChatView
+            conversations={conversations}
+            activeConvId={activeConvId}
+            onUpdateConversation={handleUpdateConversation}
+            showHistory={showChatHistory}
+            onSelectConversation={handleSelectConversation}
+            onCloseHistory={() => setShowChatHistory(false)}
+          />
         )}
       </div>
     </div>
