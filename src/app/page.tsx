@@ -218,9 +218,9 @@ function InsightCardItem({ card }: { card: InsightCard }) {
   );
 }
 
-/* ── Dropdown menu for a single filter ── */
+/* ── Filter item: dropdown when unselected, removable chip when selected ── */
 
-function FilterDropdown({
+function FilterItem({
   filterKey,
   selectedValue,
   onSelect,
@@ -235,7 +235,6 @@ function FilterDropdown({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const config = FILTER_OPTIONS[filterKey];
-  const displayLabel = selectedValue ?? config.label;
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -245,45 +244,69 @@ function FilterDropdown({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen, filterKey, onToggle]);
 
+  if (selectedValue) {
+    return (
+      <div ref={ref} className="relative">
+        <span className="flex items-center gap-1 rounded border border-[var(--light-green)] bg-[#fefefe] py-1.5 pl-2.5 pr-1.5 text-sm font-medium text-[#061d0e]">
+          <button type="button" onClick={() => onToggle(filterKey)} className="hover:underline">
+            {selectedValue}
+          </button>
+          <button
+            type="button"
+            aria-label={`Remove ${selectedValue}`}
+            onClick={() => onSelect(filterKey, null)}
+            className="ml-0.5 flex h-5 w-5 items-center justify-center rounded-full text-[#061d0e] transition-colors hover:bg-[var(--light-gray)]"
+          >
+            <CloseSmallIcon />
+          </button>
+        </span>
+
+        {isOpen && (
+          <div className="absolute left-0 top-full z-20 mt-1.5 w-max min-w-[180px] overflow-hidden rounded-xl border border-[var(--light-gray)] bg-white shadow-lg animate-in">
+            {config.options.map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => { onSelect(filterKey, opt); onToggle(filterKey); }}
+                className={`flex w-full items-center justify-between px-3 py-2.5 text-left text-sm transition-colors hover:bg-[var(--very-light-gray)] ${
+                  selectedValue === opt ? "font-semibold text-[var(--light-green)] bg-[var(--very-light-green)]" : "text-[var(--text-primary)]"
+                }`}
+              >
+                <span>{opt}</span>
+                {selectedValue === opt && <CheckIcon />}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div ref={ref} className="relative">
       <button
         type="button"
         onClick={() => onToggle(filterKey)}
         className={`flex items-center gap-1 rounded border px-2.5 py-1.5 text-sm font-medium transition-all active:scale-[0.97] ${
-          selectedValue
-            ? "border-[var(--light-green)] bg-[var(--very-light-green)] text-[#061d0e]"
-            : isOpen
-              ? "border-[var(--light-green)] bg-white text-[var(--text-primary)] shadow-sm"
-              : "border-[var(--light-gray)] bg-white text-[var(--text-primary)] hover:border-[var(--medium-gray)]"
+          isOpen
+            ? "border-[var(--light-green)] bg-white text-[var(--text-primary)] shadow-sm"
+            : "border-[var(--light-gray)] bg-white text-[var(--text-primary)] hover:border-[var(--medium-gray)]"
         }`}
       >
-        {displayLabel}
+        {config.label}
         <ChevronSmallIcon className={`h-4 w-4 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-full z-20 mt-1.5 w-max min-w-[180px] overflow-hidden rounded-xl border border-[var(--light-gray)] bg-white shadow-lg animate-in fade-in slide-in-from-top-1">
-          {selectedValue && (
-            <button
-              type="button"
-              onClick={() => { onSelect(filterKey, null); onToggle(filterKey); }}
-              className="flex w-full items-center gap-2 border-b border-[var(--light-gray)] px-3 py-2.5 text-left text-sm text-[var(--text-muted)] hover:bg-[var(--very-light-gray)]"
-            >
-              Clear selection
-            </button>
-          )}
+        <div className="absolute left-0 top-full z-20 mt-1.5 w-max min-w-[180px] overflow-hidden rounded-xl border border-[var(--light-gray)] bg-white shadow-lg animate-in">
           {config.options.map((opt) => (
             <button
               key={opt}
               type="button"
               onClick={() => { onSelect(filterKey, opt); onToggle(filterKey); }}
-              className={`flex w-full items-center justify-between px-3 py-2.5 text-left text-sm transition-colors hover:bg-[var(--very-light-gray)] ${
-                selectedValue === opt ? "font-semibold text-[var(--light-green)] bg-[var(--very-light-green)]" : "text-[var(--text-primary)]"
-              }`}
+              className="flex w-full items-center px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition-colors hover:bg-[var(--very-light-gray)]"
             >
-              <span>{opt}</span>
-              {selectedValue === opt && <CheckIcon />}
+              {opt}
             </button>
           ))}
         </div>
@@ -308,10 +331,6 @@ function AIAlertsView({
   const [openDropdown, setOpenDropdown] = useState<FilterKey | null>(null);
 
   const hasActiveFilters = Object.values(activeFilters).some(Boolean);
-  const chipEntries = (Object.entries(activeFilters) as [FilterKey, string | null][]).filter(
-    ([, v]) => v !== null
-  );
-  const filterCount = chipEntries.length;
 
   const handleToggle = useCallback((key: FilterKey) => {
     setOpenDropdown((prev) => (prev === key ? null : key));
@@ -328,10 +347,9 @@ function AIAlertsView({
     <div className="flex flex-1 flex-col overflow-hidden">
       {showFilters && (
         <div className="shrink-0 border-b border-[var(--light-gray)]">
-          {/* Dropdown row – always visible when filter panel is open */}
-          <div className="flex flex-wrap gap-2 bg-white px-4 py-2.5">
+          <div className="flex flex-wrap items-center gap-2 bg-white px-4 py-2.5">
             {(Object.keys(FILTER_OPTIONS) as FilterKey[]).map((key) => (
-              <FilterDropdown
+              <FilterItem
                 key={key}
                 filterKey={key}
                 selectedValue={activeFilters[key]}
@@ -340,45 +358,21 @@ function AIAlertsView({
                 onToggle={handleToggle}
               />
             ))}
-          </div>
-
-          {/* Active filter chips – only when selections exist */}
-          {hasActiveFilters && (
-            <div className="flex flex-wrap items-center gap-2 bg-[#ededea] px-3 py-2.5">
-              <span className="mr-0.5 text-xs font-medium text-[var(--text-muted)]">
-                {filterCount} active
-              </span>
-              {chipEntries.map(([key, value]) => (
-                <span
-                  key={key}
-                  className="flex items-center gap-1 rounded-lg border border-[var(--light-green)] bg-[#fefefe] py-1 pl-2.5 pr-1.5 text-sm font-medium text-[#061d0e] transition-all hover:bg-white hover:shadow-sm"
-                >
-                  {value}
-                  <button
-                    type="button"
-                    aria-label={`Remove ${value}`}
-                    onClick={() => onFilterChange(key, null)}
-                    className="ml-0.5 flex h-5 w-5 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--light-gray)] hover:text-[var(--text-primary)]"
-                  >
-                    <CloseSmallIcon />
-                  </button>
-                </span>
-              ))}
+            {hasActiveFilters && (
               <button
                 type="button"
                 onClick={onClearFilters}
-                className="ml-auto text-sm font-medium text-[var(--light-green)] underline decoration-[var(--light-green)]/40 underline-offset-2 transition-colors hover:text-[var(--brand-primary)]"
+                className="ml-auto text-sm font-medium text-[var(--light-green)] underline underline-offset-2 transition-colors hover:text-[var(--brand-primary)]"
               >
                 Clear all
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
 
-      {/* Results count */}
       {showFilters && hasActiveFilters && (
-        <div className="shrink-0 bg-white px-4 py-2">
+        <div className="shrink-0 bg-white px-4 py-2 border-b border-[var(--light-gray)]">
           <p className="text-xs font-medium text-[var(--text-muted)]">
             {filteredInsights.length} {filteredInsights.length === 1 ? "result" : "results"}
           </p>
