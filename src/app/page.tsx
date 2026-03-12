@@ -611,7 +611,7 @@ function AIChatView({
                 <button
                   key={i}
                   type="button"
-                  className="min-w-[164px] max-w-[164px] snap-start rounded-2xl bg-[var(--very-light-green)] px-2.5 py-2 text-left hover:opacity-90 active:scale-[0.98] transition-transform animate-slide-in-right"
+                  className="min-w-[42%] max-w-[45%] snap-start rounded-2xl bg-[var(--very-light-green)] px-2.5 py-2 text-left hover:opacity-90 active:scale-[0.98] transition-transform animate-slide-in-right"
                   style={{ animationDelay: `${i * 80}ms` }}
                   onClick={() => sendMessage(text)}
                 >
@@ -636,7 +636,7 @@ function AIChatView({
       </div>
 
       {/* Input area */}
-      <div className="relative shrink-0 flex flex-col gap-2 px-2.5 pb-2.5 pt-4 before:pointer-events-none before:absolute before:inset-x-0 before:-top-8 before:h-8 before:bg-gradient-to-t before:from-white before:to-transparent">
+      <div className="relative shrink-0 flex flex-col gap-2 px-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] pt-4 before:pointer-events-none before:absolute before:inset-x-0 before:-top-8 before:h-8 before:bg-gradient-to-t before:from-white before:to-transparent">
         <div className="flex flex-col gap-2 rounded-2xl border-2 border-[var(--light-green)] bg-white p-2.5 shadow-[0px_0px_15px_0px_#dfdde2]">
           <div className="px-1.5">
             <textarea
@@ -758,29 +758,9 @@ export default function InsightsPage() {
   }
 
   return (
-    <div data-app-root className="mx-auto flex h-screen max-w-[375px] flex-col bg-[var(--very-light-gray)]">
-      {/* Status bar */}
-      <div className="flex h-[54px] w-full shrink-0 items-center justify-between px-6 pt-3">
-        <span className="text-[15px] font-semibold tracking-[-0.28px] text-black">9:41</span>
-        <div className="flex items-center gap-1.5">
-          <svg width="18" height="12" viewBox="0 0 18 12" fill="none">
-            <rect x="1" y="3" width="3" height="9" rx="1" fill="black" />
-            <rect x="5.5" y="2" width="3" height="10" rx="1" fill="black" />
-            <rect x="10" y="1" width="3" height="11" rx="1" fill="black" />
-            <rect x="14.5" y="0" width="3" height="12" rx="1" fill="black" />
-          </svg>
-          <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
-            <path d="M8 3.6C9.8 3.6 11.4 4.3 12.6 5.4L14 4C12.4 2.5 10.3 1.6 8 1.6S3.6 2.5 2 4l1.4 1.4C4.6 4.3 6.2 3.6 8 3.6z" fill="black" />
-            <path d="M8 7.2c1 0 1.9.4 2.6 1L12 6.8c-1.1-1-2.5-1.6-4-1.6s-2.9.6-4 1.6L5.4 8.2C6.1 7.6 7 7.2 8 7.2z" fill="black" />
-            <circle cx="8" cy="10.4" r="1.6" fill="black" />
-          </svg>
-          <svg width="27" height="13" viewBox="0 0 27 13" fill="none">
-            <rect x="0.5" y="0.5" width="22" height="12" rx="2.5" stroke="black" strokeOpacity="0.35" />
-            <rect x="2" y="2" width="18" height="9" rx="1.5" fill="black" />
-            <path d="M24 4.5v4a2.5 2.5 0 000-4z" fill="black" fillOpacity="0.4" />
-          </svg>
-        </div>
-      </div>
+    <div data-app-root className="mx-auto flex h-[100dvh] w-full max-w-[480px] flex-col bg-[var(--very-light-gray)]">
+      {/* Top spacer */}
+      <div className="shrink-0 h-4" />
 
       {/* Header */}
       <header className="flex w-full shrink-0 items-center justify-between px-4 pb-2">
