@@ -595,44 +595,46 @@ function AIChatView({
       )}
 
       {/* Messages area */}
-      <div className="flex flex-1 flex-col justify-end overflow-y-auto">
-        {messages.length === 0 && showSuggestions && (
-          <div className="flex flex-1 flex-col justify-end pt-2.5">
-            <div
-              ref={dragScroll.ref}
-              onMouseDown={dragScroll.onMouseDown}
-              onMouseMove={dragScroll.onMouseMove}
-              onMouseUp={dragScroll.onMouseUp}
-              onMouseLeave={dragScroll.onMouseLeave}
-              onClickCapture={dragScroll.onClickCapture}
-              className="flex cursor-grab gap-2 overflow-x-auto px-2.5 pb-4 scrollbar-hide snap-x snap-mandatory"
-            >
-              {SUGGESTIONS.map((text, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  className="min-w-[42%] max-w-[45%] snap-start rounded-2xl bg-[var(--very-light-green)] px-2.5 py-2 text-left hover:opacity-90 active:scale-[0.98] transition-transform animate-slide-in-right"
-                  style={{ animationDelay: `${i * 80}ms` }}
-                  onClick={() => sendMessage(text)}
-                >
-                  <span className="text-sm font-medium leading-[18px] text-[var(--brand-primary)]">
-                    {text}
-                  </span>
-                </button>
-              ))}
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto scrollbar-hide">
+        <div className="flex flex-1 flex-col justify-end">
+          {messages.length === 0 && showSuggestions && (
+            <div className="flex flex-1 flex-col justify-end pt-2.5">
+              <div
+                ref={dragScroll.ref}
+                onMouseDown={dragScroll.onMouseDown}
+                onMouseMove={dragScroll.onMouseMove}
+                onMouseUp={dragScroll.onMouseUp}
+                onMouseLeave={dragScroll.onMouseLeave}
+                onClickCapture={dragScroll.onClickCapture}
+                className="flex cursor-grab gap-2 overflow-x-auto px-2.5 pb-4 scrollbar-hide snap-x snap-mandatory"
+              >
+                {SUGGESTIONS.map((text, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className="min-w-[42%] max-w-[45%] snap-start rounded-2xl bg-[var(--very-light-green)] px-2.5 py-2 text-left hover:opacity-90 active:scale-[0.98] transition-transform animate-slide-in-right"
+                    style={{ animationDelay: `${i * 80}ms` }}
+                    onClick={() => sendMessage(text)}
+                  >
+                    <span className="text-sm font-medium leading-[18px] text-[var(--brand-primary)]">
+                      {text}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {messages.length > 0 && (
-          <div className="flex flex-col gap-1 py-3">
-            {messages.map((msg) => (
-              <ChatBubble key={msg.id} msg={msg} />
-            ))}
-            {isTyping && <TypingIndicator />}
-            <div ref={messagesEndRef} />
-          </div>
-        )}
+          {messages.length > 0 && (
+            <div className="flex flex-col gap-1 py-3">
+              {messages.map((msg) => (
+                <ChatBubble key={msg.id} msg={msg} />
+              ))}
+              {isTyping && <TypingIndicator />}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Input area */}
