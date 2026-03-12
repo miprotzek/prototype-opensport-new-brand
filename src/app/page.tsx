@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-/* ─────────────────────── Icons ─────────────────────── */
+/* ═══════════════════════ Icons ═══════════════════════ */
 
 function MenuIcon() {
   return (
@@ -96,10 +96,27 @@ function CopyIcon() {
   );
 }
 
-/* ─────────────────────── Data ─────────────────────── */
+function CheckIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function SparkleIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M8 1l1.5 4.5L14 7l-4.5 1.5L8 13l-1.5-4.5L2 7l4.5-1.5L8 1z" stroke="currentColor" strokeWidth="1" fill="currentColor" />
+    </svg>
+  );
+}
+
+/* ═══════════════════════ Data ═══════════════════════ */
 
 type InsightCard = {
   category: string;
+  severity: string;
   title: string;
   description: string;
   updated: string;
@@ -107,48 +124,12 @@ type InsightCard = {
 };
 
 const INSIGHTS: InsightCard[] = [
-  {
-    category: "Injury risk & Fatigue",
-    title: "Jack Innard",
-    description: "Acute: Chronic ratio elevated: 1.41 (7d avg: 351.8, 28d avg: 249.1).",
-    updated: "Updated Feb 4th",
-    accentColor: "bg-[#e8b923]",
-  },
-  {
-    category: "Injury risk & Fatigue",
-    title: "Deian Gwynne",
-    description: "is under baseline by 28.1%.",
-    updated: "Updated Today",
-    accentColor: "bg-[#c23f3f]",
-  },
-  {
-    category: "Match & Training performance",
-    title: "Ben Loader",
-    description: "Late game speed drop detected: Q4 maxSpeed (6.93 m/s) is 10.0% below Q1-3 average (7.70 m/s)",
-    updated: "Updated Feb 4th",
-    accentColor: "bg-[#247933]",
-  },
-  {
-    category: "Match & Training performance",
-    title: "Josh Basham",
-    description: "Late game speed drop detected: Q4 maxSpeed (5.72 m/s) is 17.0% below Q1-3 average (6.89 m/s).",
-    updated: "Updated Feb 4th",
-    accentColor: "bg-[#247933]",
-  },
-  {
-    category: "Injury risk & Fatigue",
-    title: "Max Llewellyn",
-    description: "is over baseline by 90.9%.",
-    updated: "Updated Feb 4th",
-    accentColor: "bg-[#c23f3f]",
-  },
-  {
-    category: "Match & Training performance",
-    title: "Kirill Gotovtsev",
-    description: "Late game speed drop detected: Q4 maxSpeed (5.17 m/s) is 21.5% below Q1-3 average (6.58 m/s).",
-    updated: "Updated Feb 4th",
-    accentColor: "bg-[#247933]",
-  },
+  { category: "Injury risk & Fatigue", severity: "High", title: "Jack Innard", description: "Acute: Chronic ratio elevated: 1.41 (7d avg: 351.8, 28d avg: 249.1).", updated: "Updated Feb 4th", accentColor: "bg-[#e8b923]" },
+  { category: "Injury risk & Fatigue", severity: "Medium", title: "Deian Gwynne", description: "is under baseline by 28.1%.", updated: "Updated Today", accentColor: "bg-[#c23f3f]" },
+  { category: "Match & Training performance", severity: "Medium", title: "Ben Loader", description: "Late game speed drop detected: Q4 maxSpeed (6.93 m/s) is 10.0% below Q1-3 average (7.70 m/s)", updated: "Updated Feb 4th", accentColor: "bg-[#247933]" },
+  { category: "Match & Training performance", severity: "High", title: "Josh Basham", description: "Late game speed drop detected: Q4 maxSpeed (5.72 m/s) is 17.0% below Q1-3 average (6.89 m/s).", updated: "Updated Feb 4th", accentColor: "bg-[#247933]" },
+  { category: "Injury risk & Fatigue", severity: "Low", title: "Max Llewellyn", description: "is over baseline by 90.9%.", updated: "Updated Feb 4th", accentColor: "bg-[#c23f3f]" },
+  { category: "Match & Training performance", severity: "Medium", title: "Kirill Gotovtsev", description: "Late game speed drop detected: Q4 maxSpeed (5.17 m/s) is 21.5% below Q1-3 average (6.58 m/s).", updated: "Updated Feb 4th", accentColor: "bg-[#247933]" },
 ];
 
 const SUGGESTIONS = [
@@ -157,18 +138,38 @@ const SUGGESTIONS = [
   "Which players recorded the most high-intensity efforts this week?",
 ];
 
-type FilterChip = { label: string; id: string };
+const FILTER_OPTIONS = {
+  severity: { label: "All severity", options: ["Low", "Medium", "High", "Critical"] },
+  type: { label: "All types", options: ["Injury risk & Fatigue", "Match & Training performance"] },
+  date: { label: "Date range", options: ["Last 7 days", "Last 30 days", "Last 90 days", "02/02/2026 - 12/03/2026"] },
+  athlete: { label: "All athletes", options: [...new Set(INSIGHTS.map((i) => i.title))] },
+} as const;
 
-const ACTIVE_FILTERS: FilterChip[] = [
-  { id: "severity", label: "Medium severity" },
-  { id: "type", label: "Injury risk & Fatigue" },
-  { id: "date", label: "02/02/2026 - 12/03/2026" },
-  { id: "athlete", label: "Jack Innard" },
-];
+type FilterKey = keyof typeof FILTER_OPTIONS;
 
-/* ─────────────────── Sub-components ─────────────────── */
+const AI_RESPONSES: Record<string, string> = {
+  "Who reached the highest top speed during match day warmup?":
+    "Based on the GPS data from the latest match day warmup, **Ben Loader** recorded the highest top speed at **9.2 m/s** during the warm-up drills. This is consistent with his sprint profile over the past 4 weeks.\n\nNotably, Josh Basham (8.7 m/s) and Jack Innard (8.4 m/s) also showed strong numbers.",
+  "Which forwards covered the most total distance in training this week?":
+    "This week's training distance leaders among forwards:\n\n1. **Jack Innard** — 28.4 km total\n2. **Max Llewellyn** — 26.1 km total\n3. **Josh Basham** — 24.8 km total\n\nJack's total is 12% above his 4-week average, which correlates with his elevated Acute:Chronic ratio (1.41).",
+  "Which players recorded the most high-intensity efforts this week?":
+    "Top high-intensity effort counts this week:\n\n1. **Ben Loader** — 142 efforts (↑ 8% vs avg)\n2. **Kirill Gotovtsev** — 128 efforts (↓ 3% vs avg)\n3. **Josh Basham** — 119 efforts (↑ 15% vs avg)\n\nJosh Basham's increase is notable and may warrant monitoring alongside his late-game speed drops.",
+};
+
+const DEFAULT_AI_RESPONSE =
+  "Based on the available GPS and performance data, I can see several interesting patterns. The key metrics show variations across the squad that are worth monitoring.\n\nWould you like me to drill deeper into any specific player or metric?";
+
+/* ═══════════════════ Sub-components ═══════════════════ */
 
 function InsightCardItem({ card }: { card: InsightCard }) {
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    navigator.clipboard?.writeText(`${card.title}: ${card.description}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
   return (
     <article className="flex flex-col gap-4 border-b border-[var(--light-gray)] bg-white p-4 shadow-[0px_4px_20px_0px_rgba(0,0,0,0.02)]">
       <div className="flex flex-col gap-4">
@@ -179,12 +180,13 @@ function InsightCardItem({ card }: { card: InsightCard }) {
           <div className={`w-1 shrink-0 self-stretch rounded-full ${card.accentColor}`} />
           <p className="min-w-0 flex-1 text-base leading-[22px] tracking-[-0.32px] text-[var(--text-primary)]">
             <span className="font-semibold text-[var(--light-green)]">{card.title} </span>
-            <span className="font-semibold">{card.description.split(":")[0]}:</span>
-            {card.description.includes(":") && (
-              <span className="font-normal"> {card.description.substring(card.description.indexOf(":") + 1).trim()}</span>
-            )}
-            {!card.description.includes(":") && (
-              <span className="font-normal">{card.description}</span>
+            {card.description.includes(":") ? (
+              <>
+                <span className="font-semibold">{card.description.split(":")[0]}:</span>
+                <span className="font-normal"> {card.description.substring(card.description.indexOf(":") + 1).trim()}</span>
+              </>
+            ) : (
+              <span className="font-semibold">{card.description}</span>
             )}
           </p>
         </div>
@@ -200,8 +202,15 @@ function InsightCardItem({ card }: { card: InsightCard }) {
           <button type="button" aria-label="Share" className="flex h-8 w-8 items-center justify-center text-[var(--text-primary)] hover:opacity-80">
             <ShareIcon />
           </button>
-          <button type="button" aria-label="Copy" className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[var(--very-light-gray)] text-[var(--text-primary)] hover:bg-[var(--light-gray)]">
-            <CopyIcon />
+          <button
+            type="button"
+            aria-label="Copy"
+            onClick={handleCopy}
+            className={`flex h-8 w-8 items-center justify-center rounded-2xl transition-colors ${
+              copied ? "bg-[var(--very-light-green)] text-[var(--light-green)]" : "bg-[var(--very-light-gray)] text-[var(--text-primary)] hover:bg-[var(--light-gray)]"
+            }`}
+          >
+            {copied ? <CheckIcon /> : <CopyIcon />}
           </button>
         </div>
       </div>
@@ -209,133 +218,318 @@ function InsightCardItem({ card }: { card: InsightCard }) {
   );
 }
 
-/* ── Filter dropdown buttons (Screen 2: 14179:26036) ── */
-function FilterDropdowns() {
-  return (
-    <div className="flex flex-wrap gap-2 border-b border-[var(--light-gray)] bg-white px-4 py-2.5">
-      {["All severity", "All types", "Date range", "All athletes"].map((label) => (
-        <button
-          key={label}
-          type="button"
-          className="flex items-center gap-1 rounded border border-[var(--light-gray)] bg-white px-2.5 py-1.5 text-sm font-medium text-[var(--text-primary)] hover:border-[var(--light-green)]"
-        >
-          {label}
-          <ChevronSmallIcon className="h-4 w-4 text-[var(--text-primary)]" />
-        </button>
-      ))}
-    </div>
-  );
-}
+/* ── Dropdown menu for a single filter ── */
 
-/* ── Active filter chips (Screen 3: 14179:26554) ── */
-function FilterChips({
-  filters,
-  onRemove,
-  onClearAll,
+function FilterDropdown({
+  filterKey,
+  selectedValue,
+  onSelect,
 }: {
-  filters: FilterChip[];
-  onRemove: (id: string) => void;
-  onClearAll: () => void;
+  filterKey: FilterKey;
+  selectedValue: string | null;
+  onSelect: (key: FilterKey, value: string | null) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const config = FILTER_OPTIONS[filterKey];
+  const displayLabel = selectedValue ?? config.label;
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    if (open) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
   return (
-    <div className="flex flex-wrap items-center gap-2 bg-[#ededea] px-2 py-2.5">
-      {filters.map((f) => (
-        <span
-          key={f.id}
-          className="flex items-center gap-1.5 rounded border border-[var(--light-green)] bg-[#fefefe] py-1.5 pl-2.5 pr-2 text-sm font-medium text-[#061d0e]"
-        >
-          {f.label}
-          <button type="button" aria-label={`Remove ${f.label}`} onClick={() => onRemove(f.id)} className="text-[#061d0e] hover:opacity-70">
-            <CloseSmallIcon />
-          </button>
-        </span>
-      ))}
-      <button type="button" onClick={onClearAll} className="text-sm font-medium text-[var(--light-green)] underline">
-        Clear all
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={`flex items-center gap-1 rounded border px-2.5 py-1.5 text-sm font-medium transition-colors ${
+          selectedValue
+            ? "border-[var(--light-green)] bg-white text-[#061d0e]"
+            : "border-[var(--light-gray)] bg-white text-[var(--text-primary)] hover:border-[var(--light-green)]"
+        }`}
+      >
+        {displayLabel}
+        <ChevronSmallIcon className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
-    </div>
-  );
-}
 
-/* ── AI Alerts view ── */
-function AIAlertsView({
-  filterState,
-  filters,
-  onRemoveFilter,
-  onClearFilters,
-}: {
-  filterState: "hidden" | "dropdowns" | "chips";
-  filters: FilterChip[];
-  onRemoveFilter: (id: string) => void;
-  onClearFilters: () => void;
-}) {
-  const filteredInsights =
-    filterState === "chips" && filters.length > 0
-      ? INSIGHTS.filter((c) => {
-          const hasAthlete = filters.find((f) => f.id === "athlete");
-          const hasType = filters.find((f) => f.id === "type");
-          let match = true;
-          if (hasAthlete) match = match && c.title === hasAthlete.label;
-          if (hasType) match = match && c.category === hasType.label;
-          return match;
-        })
-      : INSIGHTS;
-
-  return (
-    <div className="flex flex-1 flex-col overflow-hidden">
-      {filterState === "dropdowns" && <FilterDropdowns />}
-      {filterState === "chips" && filters.length > 0 && (
-        <FilterChips filters={filters} onRemove={onRemoveFilter} onClearAll={onClearFilters} />
-      )}
-      <div className="flex-1 overflow-y-auto">
-        {filteredInsights.map((card, i) => (
-          <InsightCardItem key={i} card={card} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ── AI Chat view ── */
-function AIChatView() {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [inputText, setInputText] = useState("");
-  const hasText = inputText.trim().length > 0;
-
-  return (
-    <div className="flex flex-1 flex-col justify-end bg-white">
-      {/* Suggestion cards */}
-      <div className="px-2.5 pt-2.5">
-        <div ref={scrollRef} className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
-          {SUGGESTIONS.map((text, i) => (
+      {open && (
+        <div className="absolute left-0 top-full z-20 mt-1 w-max min-w-full overflow-hidden rounded-lg border border-[var(--light-gray)] bg-white shadow-lg">
+          {selectedValue && (
             <button
-              key={i}
               type="button"
-              className="shrink-0 w-[164px] rounded-2xl bg-[var(--very-light-green)] px-2.5 py-2 text-left hover:opacity-90"
-              onClick={() => setInputText(text)}
+              onClick={() => { onSelect(filterKey, null); setOpen(false); }}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text-muted)] hover:bg-[var(--very-light-gray)]"
             >
-              <span className="text-sm font-medium leading-[18px] text-[var(--brand-primary)]">
-                {text}
-              </span>
+              {config.label}
+            </button>
+          )}
+          {config.options.map((opt) => (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => { onSelect(filterKey, opt); setOpen(false); }}
+              className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--very-light-gray)] ${
+                selectedValue === opt ? "font-semibold text-[var(--light-green)]" : "text-[var(--text-primary)]"
+              }`}
+            >
+              {selectedValue === opt && <CheckIcon />}
+              {opt}
             </button>
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+/* ── AI Alerts View ── */
+
+function AIAlertsView({
+  showFilters,
+  activeFilters,
+  onFilterChange,
+  onClearFilters,
+}: {
+  showFilters: boolean;
+  activeFilters: Record<FilterKey, string | null>;
+  onFilterChange: (key: FilterKey, value: string | null) => void;
+  onClearFilters: () => void;
+}) {
+  const hasActiveFilters = Object.values(activeFilters).some(Boolean);
+  const chipEntries = (Object.entries(activeFilters) as [FilterKey, string | null][]).filter(
+    ([, v]) => v !== null
+  );
+
+  const filteredInsights = INSIGHTS.filter((card) => {
+    if (activeFilters.severity && card.severity !== activeFilters.severity) return false;
+    if (activeFilters.type && card.category !== activeFilters.type) return false;
+    if (activeFilters.athlete && card.title !== activeFilters.athlete) return false;
+    return true;
+  });
+
+  return (
+    <div className="flex flex-1 flex-col overflow-hidden">
+      {showFilters && (
+        <div className="shrink-0">
+          {/* Dropdown row */}
+          <div className="flex flex-wrap gap-2 border-b border-[var(--light-gray)] bg-white px-4 py-2.5">
+            {(Object.keys(FILTER_OPTIONS) as FilterKey[]).map((key) => (
+              <FilterDropdown
+                key={key}
+                filterKey={key}
+                selectedValue={activeFilters[key]}
+                onSelect={onFilterChange}
+              />
+            ))}
+          </div>
+
+          {/* Active filter chips */}
+          {hasActiveFilters && (
+            <div className="flex flex-wrap items-center gap-2 bg-[#ededea] px-2 py-2.5">
+              {chipEntries.map(([key, value]) => (
+                <span
+                  key={key}
+                  className="flex items-center gap-1.5 rounded border border-[var(--light-green)] bg-[#fefefe] py-1.5 pl-2.5 pr-2 text-sm font-medium text-[#061d0e]"
+                >
+                  {value}
+                  <button type="button" aria-label={`Remove ${value}`} onClick={() => onFilterChange(key, null)} className="text-[#061d0e] hover:opacity-70">
+                    <CloseSmallIcon />
+                  </button>
+                </span>
+              ))}
+              <button type="button" onClick={onClearFilters} className="text-sm font-medium text-[var(--light-green)] underline">
+                Clear all
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="flex-1 overflow-y-auto">
+        {filteredInsights.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-20 text-center">
+            <p className="text-base font-medium text-[var(--text-primary)]">No alerts match</p>
+            <p className="text-sm text-[var(--text-muted)]">Try adjusting your filters.</p>
+            <button type="button" onClick={onClearFilters} className="mt-2 text-sm font-medium text-[var(--light-green)] underline">
+              Clear all filters
+            </button>
+          </div>
+        ) : (
+          filteredInsights.map((card, i) => <InsightCardItem key={i} card={card} />)
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Chat message types ── */
+
+type ChatMessage = {
+  id: number;
+  role: "user" | "assistant";
+  text: string;
+};
+
+/* ── Typing dots animation ── */
+function TypingIndicator() {
+  return (
+    <div className="flex items-start gap-2 px-4 py-3">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--very-light-green)] text-[var(--light-green)]">
+        <SparkleIcon />
+      </div>
+      <div className="flex items-center gap-1 rounded-2xl bg-[var(--very-light-gray)] px-4 py-3">
+        <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--text-muted)] [animation-delay:0ms]" />
+        <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--text-muted)] [animation-delay:150ms]" />
+        <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--text-muted)] [animation-delay:300ms]" />
+      </div>
+    </div>
+  );
+}
+
+/* ── Single chat bubble ── */
+function ChatBubble({ msg }: { msg: ChatMessage }) {
+  const isUser = msg.role === "user";
+  return (
+    <div className={`flex items-start gap-2 px-4 py-1.5 ${isUser ? "flex-row-reverse" : ""}`}>
+      {!isUser && (
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--very-light-green)] text-[var(--light-green)]">
+          <SparkleIcon />
+        </div>
+      )}
+      <div
+        className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-[15px] leading-[22px] ${
+          isUser
+            ? "rounded-tr-md bg-[var(--very-light-green)] text-[var(--brand-primary)]"
+            : "rounded-tl-md bg-[var(--very-light-gray)] text-[var(--text-primary)]"
+        }`}
+        dangerouslySetInnerHTML={{
+          __html: msg.text
+            .replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold">$1</strong>')
+            .replace(/\n/g, "<br/>"),
+        }}
+      />
+    </div>
+  );
+}
+
+/* ── AI Chat View ── */
+
+function AIChatView({ onNewChat }: { onNewChat: boolean }) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [inputText, setInputText] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(true);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const nextId = useRef(1);
+
+  useEffect(() => {
+    if (onNewChat) {
+      setMessages([]);
+      setInputText("");
+      setIsTyping(false);
+      setShowSuggestions(true);
+      nextId.current = 1;
+    }
+  }, [onNewChat]);
+
+  const scrollToBottom = useCallback(() => {
+    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+  }, []);
+
+  function sendMessage(text: string) {
+    if (!text.trim()) return;
+
+    const userMsg: ChatMessage = { id: nextId.current++, role: "user", text: text.trim() };
+    setMessages((prev) => [...prev, userMsg]);
+    setInputText("");
+    setShowSuggestions(false);
+    setIsTyping(true);
+    scrollToBottom();
+
+    const responseText = AI_RESPONSES[text.trim()] ?? DEFAULT_AI_RESPONSE;
+    const delay = 1200 + Math.random() * 800;
+
+    setTimeout(() => {
+      const aiMsg: ChatMessage = { id: nextId.current++, role: "assistant", text: responseText };
+      setMessages((prev) => [...prev, aiMsg]);
+      setIsTyping(false);
+      scrollToBottom();
+    }, delay);
+  }
+
+  function handleSubmit() {
+    sendMessage(inputText);
+    textareaRef.current?.focus();
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  }
+
+  function handleSuggestionClick(text: string) {
+    sendMessage(text);
+  }
+
+  const hasText = inputText.trim().length > 0;
+
+  return (
+    <div className="flex flex-1 flex-col bg-white">
+      {/* Messages area */}
+      <div className="flex flex-1 flex-col justify-end overflow-y-auto">
+        {messages.length === 0 && showSuggestions && (
+          <div className="flex flex-1 flex-col justify-end px-2.5 pt-2.5">
+            <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
+              {SUGGESTIONS.map((text, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className="shrink-0 w-[164px] rounded-2xl bg-[var(--very-light-green)] px-2.5 py-2 text-left hover:opacity-90 active:scale-[0.98] transition-transform"
+                  onClick={() => handleSuggestionClick(text)}
+                >
+                  <span className="text-sm font-medium leading-[18px] text-[var(--brand-primary)]">
+                    {text}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {messages.length > 0 && (
+          <div className="flex flex-col gap-1 py-3">
+            {messages.map((msg) => (
+              <ChatBubble key={msg.id} msg={msg} />
+            ))}
+            {isTyping && <TypingIndicator />}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
       </div>
 
-      {/* Chat input area */}
-      <div className="flex flex-col gap-2 px-2.5 pb-2.5">
+      {/* Input area */}
+      <div className="shrink-0 flex flex-col gap-2 px-2.5 pb-2.5">
         <div className="flex flex-col gap-2 rounded-2xl border-2 border-[var(--light-green)] bg-white p-2.5 shadow-[0px_0px_15px_0px_#dfdde2]">
           <div className="px-1.5">
             <textarea
+              ref={textareaRef}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="Type # to browse Drills, Sessions, and Timeframes, @ for Participants, and ! for Metrics."
               rows={2}
               className="w-full resize-none bg-transparent text-base leading-6 text-[var(--text-primary)] placeholder:text-[#a9a9a6] focus:outline-none"
             />
           </div>
 
-          {/* Filter chips + send button */}
           <div className="flex items-center gap-2">
             <div className="flex flex-1 flex-wrap items-center gap-2">
               <span className="rounded-2xl bg-[var(--very-light-green)] px-1.5 py-[3px] text-sm font-medium tracking-[0.14px] text-[var(--medium-gray)]">
@@ -345,16 +539,26 @@ function AIChatView() {
                 Metrics
                 <ChevronSmallIcon className="h-4 w-4 text-[var(--medium-gray)]" />
               </button>
-              <button type="button" className="flex items-center gap-1 rounded-2xl bg-[var(--very-light-gray)] px-1.5 py-[3px] text-sm font-medium tracking-[0.14px] text-[var(--medium-gray)]">
+              <button
+                type="button"
+                onClick={() => setShowSuggestions(!showSuggestions)}
+                className={`flex items-center gap-1 rounded-2xl px-1.5 py-[3px] text-sm font-medium tracking-[0.14px] transition-colors ${
+                  showSuggestions && messages.length === 0
+                    ? "bg-[var(--very-light-green)] text-[var(--brand-primary)]"
+                    : "bg-[var(--very-light-gray)] text-[var(--medium-gray)]"
+                }`}
+              >
                 Suggestions
-                <ChevronSmallIcon className="h-4 w-4 text-[var(--medium-gray)]" />
+                <ChevronSmallIcon className="h-4 w-4" />
               </button>
             </div>
             <button
               type="button"
               aria-label="Send message"
+              onClick={handleSubmit}
+              disabled={!hasText}
               className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full transition-colors ${
-                hasText ? "bg-[var(--light-green)]" : "bg-[#a9a9a6]"
+                hasText ? "bg-[var(--light-green)] active:scale-95" : "bg-[#a9a9a6]"
               }`}
             >
               <ArrowUpIcon />
@@ -370,38 +574,32 @@ function AIChatView() {
   );
 }
 
-/* ─────────────────── Main Page ─────────────────── */
+/* ═══════════════════ Main Page ═══════════════════ */
 
 export default function InsightsPage() {
   const [activeTab, setActiveTab] = useState<"alerts" | "chat">("alerts");
-  const [filterState, setFilterState] = useState<"hidden" | "dropdowns" | "chips">("hidden");
-  const [filters, setFilters] = useState<FilterChip[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<Record<FilterKey, string | null>>({
+    severity: null,
+    type: null,
+    date: null,
+    athlete: null,
+  });
+  const [newChatSignal, setNewChatSignal] = useState(false);
 
-  function handleFilterToggle() {
-    if (filterState === "hidden") {
-      setFilterState("dropdowns");
-    } else if (filterState === "dropdowns") {
-      setFilters([...ACTIVE_FILTERS]);
-      setFilterState("chips");
-    } else {
-      setFilterState("hidden");
-      setFilters([]);
-    }
-  }
+  const hasActiveFilters = Object.values(activeFilters).some(Boolean);
 
-  function handleRemoveFilter(id: string) {
-    const next = filters.filter((f) => f.id !== id);
-    if (next.length === 0) {
-      setFilterState("hidden");
-      setFilters([]);
-    } else {
-      setFilters(next);
-    }
+  function handleFilterChange(key: FilterKey, value: string | null) {
+    setActiveFilters((prev) => ({ ...prev, [key]: value }));
   }
 
   function handleClearFilters() {
-    setFilterState("hidden");
-    setFilters([]);
+    setActiveFilters({ severity: null, type: null, date: null, athlete: null });
+  }
+
+  function handleNewChat() {
+    setNewChatSignal(true);
+    setTimeout(() => setNewChatSignal(false), 100);
   }
 
   return (
@@ -472,19 +670,22 @@ export default function InsightsPage() {
             </button>
           </div>
 
-          {/* Tab-bar actions */}
           {activeTab === "alerts" ? (
             <button
               type="button"
-              aria-label="Filter"
-              onClick={handleFilterToggle}
-              className="flex h-[34px] w-[34px] items-center justify-center rounded border border-[var(--light-gray)] bg-white text-[var(--text-primary)] hover:bg-[var(--very-light-gray)]"
+              aria-label="Toggle filters"
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex h-[34px] w-[34px] items-center justify-center rounded border transition-colors ${
+                showFilters || hasActiveFilters
+                  ? "border-[var(--light-green)] bg-[var(--very-light-green)] text-[var(--light-green)]"
+                  : "border-[var(--light-gray)] bg-white text-[var(--text-primary)] hover:bg-[var(--very-light-gray)]"
+              }`}
             >
               <FilterIcon />
             </button>
           ) : (
             <div className="flex items-center gap-4">
-              <button type="button" aria-label="New chat" className="flex h-[30px] w-[30px] items-center justify-center rounded border border-[var(--light-gray)] text-[var(--text-primary)] hover:bg-[var(--very-light-gray)]">
+              <button type="button" aria-label="New chat" onClick={handleNewChat} className="flex h-[30px] w-[30px] items-center justify-center rounded border border-[var(--light-gray)] text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-transform">
                 <EditIcon />
               </button>
               <button type="button" aria-label="Chat history" className="flex h-[30px] w-[30px] items-center justify-center rounded border border-[var(--light-gray)] text-[var(--text-primary)] hover:bg-[var(--very-light-gray)]">
@@ -497,13 +698,13 @@ export default function InsightsPage() {
         {/* Tab content */}
         {activeTab === "alerts" ? (
           <AIAlertsView
-            filterState={filterState}
-            filters={filters}
-            onRemoveFilter={handleRemoveFilter}
+            showFilters={showFilters}
+            activeFilters={activeFilters}
+            onFilterChange={handleFilterChange}
             onClearFilters={handleClearFilters}
           />
         ) : (
-          <AIChatView />
+          <AIChatView onNewChat={newChatSignal} />
         )}
       </div>
     </div>
