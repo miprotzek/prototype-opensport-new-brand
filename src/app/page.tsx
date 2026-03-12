@@ -316,20 +316,8 @@ function AIAlertsView({
     <div className="flex flex-1 flex-col overflow-hidden">
       {showFilters && (
         <div className="shrink-0">
-          {/* Dropdown row */}
-          <div className="flex flex-wrap gap-2 border-b border-[var(--light-gray)] bg-white px-4 py-2.5">
-            {(Object.keys(FILTER_OPTIONS) as FilterKey[]).map((key) => (
-              <FilterDropdown
-                key={key}
-                filterKey={key}
-                selectedValue={activeFilters[key]}
-                onSelect={onFilterChange}
-              />
-            ))}
-          </div>
-
-          {/* Active filter chips */}
-          {hasActiveFilters && (
+          {hasActiveFilters ? (
+            /* Show only the chips when filters are applied */
             <div className="flex flex-wrap items-center gap-2 bg-[#ededea] px-2 py-2.5">
               {chipEntries.map(([key, value]) => (
                 <span
@@ -345,6 +333,18 @@ function AIAlertsView({
               <button type="button" onClick={onClearFilters} className="text-sm font-medium text-[var(--light-green)] underline">
                 Clear all
               </button>
+            </div>
+          ) : (
+            /* Show dropdowns when no filters are applied yet */
+            <div className="flex flex-wrap gap-2 border-b border-[var(--light-gray)] bg-white px-4 py-2.5">
+              {(Object.keys(FILTER_OPTIONS) as FilterKey[]).map((key) => (
+                <FilterDropdown
+                  key={key}
+                  filterKey={key}
+                  selectedValue={activeFilters[key]}
+                  onSelect={onFilterChange}
+                />
+              ))}
             </div>
           )}
         </div>
