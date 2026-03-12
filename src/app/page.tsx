@@ -479,8 +479,6 @@ function AIChatView({
   showHistory,
   onSelectConversation,
   onCloseHistory,
-  prefillText,
-  onPrefillConsumed,
 }: {
   conversations: Conversation[];
   activeConvId: number;
@@ -488,8 +486,6 @@ function AIChatView({
   showHistory: boolean;
   onSelectConversation: (id: number) => void;
   onCloseHistory: () => void;
-  prefillText?: string;
-  onPrefillConsumed?: () => void;
 }) {
   const activeConv = conversations.find((c) => c.id === activeConvId);
   const messages = activeConv?.messages ?? [];
@@ -503,17 +499,22 @@ function AIChatView({
   const dragScroll = useDragScroll();
 
   useEffect(() => {
+    setInputText("");
     setIsTyping(false);
     setShowSuggestions(messages.length === 0);
     nextMsgId.current = messages.length > 0 ? Math.max(...messages.map((m) => m.id)) + 1 : 1;
 
-    if (prefillText) {
-      setInputText(prefillText);
-      setShowSuggestions(false);
-      onPrefillConsumed?.();
-      setTimeout(() => textareaRef.current?.focus(), 100);
-    } else {
-      setInputText("");
+    if (messages.length === 1 && messages[0].role === "user") {
+      setIsTyping(true);
+      scrollToBottom();
+      const convId = activeConvId;
+      const title = activeConv?.title ?? "New chat";
+      const delay = 1200 + Math.random() * 800;
+      setTimeout(() => {
+        const aiMsg: ChatMessage = { id: nextMsgId.current++, role: "assistant", text: DEFAULT_AI_RESPONSE };
+        onUpdateConversation(convId, [...messages, aiMsg], title);
+        setIsTyping(false);
+      }, delay);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeConvId]);
@@ -687,7 +688,6 @@ export default function InsightsPage() {
   ]);
   const [activeConvId, setActiveConvId] = useState(1);
   const [showChatHistory, setShowChatHistory] = useState(false);
-  const [prefillText, setPrefillText] = useState("");
   const nextConvId = useRef(2);
 
   const hasActiveFilters = Object.values(activeFilters).some(Boolean);
@@ -721,17 +721,17 @@ export default function InsightsPage() {
   function handleAlertToChat(card: InsightCard) {
     const newId = nextConvId.current++;
     const prompt = `Validate this alert and suggest follow up actions:\n\nAlert details: "${card.title} ${card.description}"\nAthlete: ${card.title}\nCategory: ${card.category}`;
+    const userMsg: ChatMessage = { id: 1, role: "user", text: prompt };
     const newConv: Conversation = {
       id: newId,
       title: `Alert: ${card.title}`,
-      messages: [],
+      messages: [userMsg],
       timestamp: "Now",
     };
     setConversations((prev) => [newConv, ...prev]);
     setActiveConvId(newId);
     setActiveTab("chat");
     setShowChatHistory(false);
-    setPrefillText(prompt);
   }
 
   return (
@@ -862,8 +862,6 @@ export default function InsightsPage() {
               showHistory={showChatHistory}
               onSelectConversation={handleSelectConversation}
               onCloseHistory={() => setShowChatHistory(false)}
-              prefillText={prefillText}
-              onPrefillConsumed={() => setPrefillText("")}
             />
           )}
         </div>
