@@ -79,12 +79,12 @@ type InsightCard = {
 };
 
 const INSIGHTS: InsightCard[] = [
-  { category: "Injury risk & Fatigue", severity: "High", title: "Jack Innard", description: "Acute: Chronic ratio elevated: 1.41 (7d avg: 351.8, 28d avg: 249.1).", updated: "Updated Feb 4th", accentColor: "bg-[#e8b923]" },
-  { category: "Injury risk & Fatigue", severity: "Medium", title: "Deian Gwynne", description: "is under baseline by 28.1%.", updated: "Updated Today", accentColor: "bg-[#c23f3f]" },
-  { category: "Match & Training performance", severity: "Medium", title: "Ben Loader", description: "Late game speed drop detected: Q4 maxSpeed (6.93 m/s) is 10.0% below Q1-3 average (7.70 m/s)", updated: "Updated Feb 4th", accentColor: "bg-[#247933]" },
-  { category: "Match & Training performance", severity: "High", title: "Josh Basham", description: "Late game speed drop detected: Q4 maxSpeed (5.72 m/s) is 17.0% below Q1-3 average (6.89 m/s).", updated: "Updated Feb 4th", accentColor: "bg-[#247933]" },
-  { category: "Injury risk & Fatigue", severity: "Low", title: "Max Llewellyn", description: "is over baseline by 90.9%.", updated: "Updated Feb 4th", accentColor: "bg-[#c23f3f]" },
-  { category: "Match & Training performance", severity: "Medium", title: "Kirill Gotovtsev", description: "Late game speed drop detected: Q4 maxSpeed (5.17 m/s) is 21.5% below Q1-3 average (6.58 m/s).", updated: "Updated Feb 4th", accentColor: "bg-[#247933]" },
+  { category: "Injury risk & Fatigue", severity: "High", title: "Jack Innard", description: "Acute: Chronic ratio elevated: 1.41 (7d avg: 351.8, 28d avg: 249.1).", updated: "Updated Feb 4th", accentColor: "bg-[#c23f3f]" },
+  { category: "Injury risk & Fatigue", severity: "Medium", title: "Deian Gwynne", description: "is under baseline by 28.1%.", updated: "Updated Today", accentColor: "bg-[#e8b923]" },
+  { category: "Match & Training performance", severity: "Medium", title: "Ben Loader", description: "Late game speed drop detected: Q4 maxSpeed (6.93 m/s) is 10.0% below Q1-3 average (7.70 m/s)", updated: "Updated Feb 4th", accentColor: "bg-[#e8b923]" },
+  { category: "Match & Training performance", severity: "High", title: "Josh Basham", description: "Late game speed drop detected: Q4 maxSpeed (5.72 m/s) is 17.0% below Q1-3 average (6.89 m/s).", updated: "Updated Feb 4th", accentColor: "bg-[#c23f3f]" },
+  { category: "Injury risk & Fatigue", severity: "Medium", title: "Max Llewellyn", description: "is over baseline by 90.9%.", updated: "Updated Feb 4th", accentColor: "bg-[#e8b923]" },
+  { category: "Match & Training performance", severity: "Medium", title: "Kirill Gotovtsev", description: "Late game speed drop detected: Q4 maxSpeed (5.17 m/s) is 21.5% below Q1-3 average (6.58 m/s).", updated: "Updated Feb 4th", accentColor: "bg-[#e8b923]" },
 ];
 
 const SUGGESTIONS = [
@@ -94,7 +94,7 @@ const SUGGESTIONS = [
 ];
 
 const FILTER_OPTIONS = {
-  severity: { label: "All severity", options: ["Low", "Medium", "High", "Critical"] },
+  severity: { label: "All severity", options: ["Medium", "High"] },
   type: { label: "All types", options: ["Injury risk & Fatigue", "Match & Training performance"] },
   date: { label: "Date range", options: ["Last 7 days", "Last 30 days", "Last 90 days", "02/02/2026 - 12/03/2026"] },
   athlete: { label: "All athletes", options: [...new Set(INSIGHTS.map((i) => i.title))] },
@@ -116,7 +116,7 @@ const DEFAULT_AI_RESPONSE =
 
 /* ═══════════════════ Sub-components ═══════════════════ */
 
-function InsightCardItem({ card, onSendToChat }: { card: InsightCard; onSendToChat: (card: InsightCard) => void }) {
+function InsightCardItem({ card, onSendToChat, onFilterBy }: { card: InsightCard; onSendToChat: (card: InsightCard) => void; onFilterBy: (key: FilterKey, value: string) => void }) {
   const [copied, setCopied] = useState(false);
 
   function handleCopy() {
@@ -128,13 +128,13 @@ function InsightCardItem({ card, onSendToChat }: { card: InsightCard; onSendToCh
   return (
     <article className="flex flex-col gap-4 border-b border-[var(--light-gray)] bg-white p-4 shadow-[0px_4px_20px_0px_rgba(0,0,0,0.02)]">
       <div className="flex flex-col gap-4">
-        <p className="text-sm font-medium leading-5 text-[var(--brand-primary)]">
+        <button type="button" onClick={() => onFilterBy("type", card.category)} className="text-sm font-medium leading-5 text-[var(--brand-primary)] text-left hover:underline underline-offset-2 transition-all">
           {card.category}
-        </p>
+        </button>
         <div className="flex gap-2.5 items-start">
           <div className={`w-1 shrink-0 self-stretch rounded-full ${card.accentColor}`} />
           <p className="min-w-0 flex-1 text-base leading-[22px] tracking-[-0.32px] text-[var(--text-primary)]">
-            <span className="font-semibold text-[var(--light-green)]">{card.title} </span>
+            <button type="button" onClick={() => onFilterBy("athlete", card.title)} className="font-semibold text-[var(--light-green)] hover:underline underline-offset-2 transition-all">{card.title}</button>{" "}
             {card.description.includes(":") ? (
               <>
                 <span className="font-semibold">{card.description.split(":")[0]}:</span>
@@ -288,12 +288,14 @@ function AIAlertsView({
   onFilterChange,
   onClearFilters,
   onSendToChat,
+  onShowFilters,
 }: {
   showFilters: boolean;
   activeFilters: Record<FilterKey, string | null>;
   onFilterChange: (key: FilterKey, value: string | null) => void;
   onClearFilters: () => void;
   onSendToChat: (card: InsightCard) => void;
+  onShowFilters: () => void;
 }) {
   const [openDropdown, setOpenDropdown] = useState<FilterKey | null>(null);
 
@@ -302,6 +304,11 @@ function AIAlertsView({
   const handleToggle = useCallback((key: FilterKey) => {
     setOpenDropdown((prev) => (prev === key ? null : key));
   }, []);
+
+  const handleQuickFilter = useCallback((key: FilterKey, value: string) => {
+    if (!showFilters) onShowFilters();
+    onFilterChange(key, value);
+  }, [showFilters, onShowFilters, onFilterChange]);
 
   const filteredInsights = INSIGHTS.filter((card) => {
     if (activeFilters.severity && card.severity !== activeFilters.severity) return false;
@@ -365,7 +372,7 @@ function AIAlertsView({
         ) : (
           filteredInsights.map((card, i) => (
             <div key={i} className="animate-fade-up" style={{ animationDelay: `${i * 60}ms` }}>
-              <InsightCardItem card={card} onSendToChat={onSendToChat} />
+              <InsightCardItem card={card} onSendToChat={onSendToChat} onFilterBy={handleQuickFilter} />
             </div>
           ))
         )}
@@ -869,6 +876,7 @@ export default function InsightsPage() {
               onFilterChange={handleFilterChange}
               onClearFilters={handleClearFilters}
               onSendToChat={handleAlertToChat}
+              onShowFilters={() => setShowFilters(true)}
             />
           ) : (
             <AIChatView
