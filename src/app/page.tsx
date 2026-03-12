@@ -1,114 +1,69 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Info,
+  Copy,
+  Check,
+  Menu as MenuFeather,
+  ChevronDown,
+  Filter,
+  X,
+  Edit,
+  MessageSquare,
+  ArrowUp,
+  Zap,
+} from "react-feather";
+
+/* ═══════════════════ Drag Scroll ═══════════════════ */
+
+function useDragScroll() {
+  const ref = useRef<HTMLDivElement>(null);
+  const state = useRef({ isDown: false, startX: 0, scrollLeft: 0, dragged: false });
+
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
+    const el = ref.current;
+    if (!el) return;
+    state.current = { isDown: true, startX: e.pageX - el.offsetLeft, scrollLeft: el.scrollLeft, dragged: false };
+    el.style.cursor = "grabbing";
+    el.style.userSelect = "none";
+  }, []);
+
+  const onMouseMove = useCallback((e: React.MouseEvent) => {
+    const el = ref.current;
+    if (!el || !state.current.isDown) return;
+    e.preventDefault();
+    const x = e.pageX - el.offsetLeft;
+    const walk = x - state.current.startX;
+    if (Math.abs(walk) > 3) state.current.dragged = true;
+    el.scrollLeft = state.current.scrollLeft - walk;
+  }, []);
+
+  const onMouseUp = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    state.current.isDown = false;
+    el.style.cursor = "grab";
+    el.style.removeProperty("user-select");
+  }, []);
+
+  const onClick = useCallback((e: React.MouseEvent) => {
+    if (state.current.dragged) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, []);
+
+  return { ref, onMouseDown, onMouseMove, onMouseUp, onMouseLeave: onMouseUp, onClickCapture: onClick };
+}
 
 /* ═══════════════════════ Icons ═══════════════════════ */
 
 function MenuIcon() {
   return (
-    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-      <circle cx="20" cy="20" r="20" fill="#f8f7f3" />
-      <path d="M12 14h16M12 20h16M12 26h16" stroke="#1e3c20" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function ChevronDownIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function ChevronSmallIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M5 7l3 3 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function FilterIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <path d="M2 4h16M5 10h10M8 16h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function CloseSmallIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function EditIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M11.5 1.5l3 3L5 14H2v-3L11.5 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M9.5 3.5l3 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function MessageSquareIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M2 2h12v9H5l-3 3V2z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function ArrowUpIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M8 13V3M8 3l-4 4M8 3l4 4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function InfoIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M10 9v4M10 7v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function ShareIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <path d="M15 7l-5-4v3c-4 0-7 2.5-7 6 1-2 3-3 5-3h2v3l5-4z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function CopyIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <rect x="6" y="6" width="11" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M4 14V4a1 1 0 011-1h9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-      <path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function SparkleIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M8 1l1.5 4.5L14 7l-4.5 1.5L8 13l-1.5-4.5L2 7l4.5-1.5L8 1z" stroke="currentColor" strokeWidth="1" fill="currentColor" />
-    </svg>
+    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--brand-primary)]">
+      <MenuFeather size={18} color="white" />
+    </div>
   );
 }
 
@@ -161,7 +116,7 @@ const DEFAULT_AI_RESPONSE =
 
 /* ═══════════════════ Sub-components ═══════════════════ */
 
-function InsightCardItem({ card }: { card: InsightCard }) {
+function InsightCardItem({ card, onSendToChat }: { card: InsightCard; onSendToChat: (card: InsightCard) => void }) {
   const [copied, setCopied] = useState(false);
 
   function handleCopy() {
@@ -197,10 +152,10 @@ function InsightCardItem({ card }: { card: InsightCard }) {
         </p>
         <div className="flex gap-2.5 items-center">
           <button type="button" aria-label="More info" className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[var(--very-light-gray)] text-[var(--text-primary)] hover:bg-[var(--light-gray)]">
-            <InfoIcon />
+            <Info size={18} />
           </button>
-          <button type="button" aria-label="Share" className="flex h-8 w-8 items-center justify-center text-[var(--text-primary)] hover:opacity-80">
-            <ShareIcon />
+          <button type="button" aria-label="Send to AI chat" onClick={() => onSendToChat(card)} className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[var(--very-light-gray)] text-[var(--text-primary)] hover:bg-[var(--light-gray)] active:scale-95 transition-transform">
+            <Zap size={18} />
           </button>
           <button
             type="button"
@@ -210,7 +165,7 @@ function InsightCardItem({ card }: { card: InsightCard }) {
               copied ? "bg-[var(--very-light-green)] text-[var(--light-green)]" : "bg-[var(--very-light-gray)] text-[var(--text-primary)] hover:bg-[var(--light-gray)]"
             }`}
           >
-            {copied ? <CheckIcon /> : <CopyIcon />}
+            {copied ? <Check size={16} /> : <Copy size={18} />}
           </button>
         </div>
       </div>
@@ -257,7 +212,7 @@ function FilterItem({
             onClick={() => onSelect(filterKey, null)}
             className="ml-0.5 flex h-5 w-5 items-center justify-center rounded-full text-[#061d0e] transition-colors hover:bg-[var(--light-gray)]"
           >
-            <CloseSmallIcon />
+            <X size={14} />
           </button>
         </span>
 
@@ -273,7 +228,7 @@ function FilterItem({
                 }`}
               >
                 <span>{opt}</span>
-                {selectedValue === opt && <CheckIcon />}
+                {selectedValue === opt && <Check size={14} />}
               </button>
             ))}
           </div>
@@ -294,7 +249,7 @@ function FilterItem({
         }`}
       >
         {config.label}
-        <ChevronSmallIcon className={`h-4 w-4 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+        <ChevronDown size={14} className={`transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
       </button>
 
       {isOpen && (
@@ -322,11 +277,13 @@ function AIAlertsView({
   activeFilters,
   onFilterChange,
   onClearFilters,
+  onSendToChat,
 }: {
   showFilters: boolean;
   activeFilters: Record<FilterKey, string | null>;
   onFilterChange: (key: FilterKey, value: string | null) => void;
   onClearFilters: () => void;
+  onSendToChat: (card: InsightCard) => void;
 }) {
   const [openDropdown, setOpenDropdown] = useState<FilterKey | null>(null);
 
@@ -383,7 +340,7 @@ function AIAlertsView({
         {filteredInsights.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--very-light-gray)] text-[var(--text-muted)]">
-              <FilterIcon />
+              <Filter size={20} />
             </div>
             <p className="text-base font-medium text-[var(--text-primary)]">No alerts match</p>
             <p className="max-w-[200px] text-sm text-[var(--text-muted)]">Try removing some filters to see more results.</p>
@@ -396,7 +353,7 @@ function AIAlertsView({
             </button>
           </div>
         ) : (
-          filteredInsights.map((card, i) => <InsightCardItem key={i} card={card} />)
+          filteredInsights.map((card, i) => <InsightCardItem key={i} card={card} onSendToChat={onSendToChat} />)
         )}
       </div>
     </div>
@@ -416,7 +373,7 @@ function TypingIndicator() {
   return (
     <div className="flex items-start gap-2 px-4 py-3">
       <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--very-light-green)] text-[var(--light-green)]">
-        <SparkleIcon />
+        <Zap size={14} />
       </div>
       <div className="flex items-center gap-1 rounded-2xl bg-[var(--very-light-gray)] px-4 py-3">
         <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--text-muted)] [animation-delay:0ms]" />
@@ -434,7 +391,7 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
     <div className={`flex items-start gap-2 px-4 py-1.5 ${isUser ? "flex-row-reverse" : ""}`}>
       {!isUser && (
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--very-light-green)] text-[var(--light-green)]">
-          <SparkleIcon />
+          <Zap size={14} />
         </div>
       )}
       <div
@@ -480,14 +437,14 @@ function ChatHistoryPanel({
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--light-gray)] px-4">
         <h2 className="text-base font-semibold text-[var(--text-primary)]">Chat history</h2>
         <button type="button" aria-label="Close history" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)]">
-          <CloseSmallIcon />
+          <X size={16} />
         </button>
       </div>
       <div className="flex-1 overflow-y-auto">
         {conversations.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--very-light-gray)] text-[var(--text-muted)]">
-              <MessageSquareIcon />
+              <MessageSquare size={20} />
             </div>
             <p className="text-sm text-[var(--text-muted)]">No conversations yet</p>
           </div>
@@ -522,6 +479,8 @@ function AIChatView({
   showHistory,
   onSelectConversation,
   onCloseHistory,
+  prefillText,
+  onPrefillConsumed,
 }: {
   conversations: Conversation[];
   activeConvId: number;
@@ -529,6 +488,8 @@ function AIChatView({
   showHistory: boolean;
   onSelectConversation: (id: number) => void;
   onCloseHistory: () => void;
+  prefillText?: string;
+  onPrefillConsumed?: () => void;
 }) {
   const activeConv = conversations.find((c) => c.id === activeConvId);
   const messages = activeConv?.messages ?? [];
@@ -539,13 +500,23 @@ function AIChatView({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const nextMsgId = useRef(1);
+  const dragScroll = useDragScroll();
 
   useEffect(() => {
-    setInputText("");
     setIsTyping(false);
     setShowSuggestions(messages.length === 0);
     nextMsgId.current = messages.length > 0 ? Math.max(...messages.map((m) => m.id)) + 1 : 1;
-  }, [activeConvId, messages.length]);
+
+    if (prefillText) {
+      setInputText(prefillText);
+      setShowSuggestions(false);
+      onPrefillConsumed?.();
+      setTimeout(() => textareaRef.current?.focus(), 100);
+    } else {
+      setInputText("");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeConvId]);
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
@@ -603,13 +574,21 @@ function AIChatView({
       {/* Messages area */}
       <div className="flex flex-1 flex-col justify-end overflow-y-auto">
         {messages.length === 0 && showSuggestions && (
-          <div className="flex flex-1 flex-col justify-end px-2.5 pt-2.5">
-            <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
+          <div className="flex flex-1 flex-col justify-end pt-2.5">
+            <div
+              ref={dragScroll.ref}
+              onMouseDown={dragScroll.onMouseDown}
+              onMouseMove={dragScroll.onMouseMove}
+              onMouseUp={dragScroll.onMouseUp}
+              onMouseLeave={dragScroll.onMouseLeave}
+              onClickCapture={dragScroll.onClickCapture}
+              className="flex cursor-grab gap-2 overflow-x-auto px-2.5 pb-4 scrollbar-hide snap-x snap-mandatory"
+            >
               {SUGGESTIONS.map((text, i) => (
                 <button
                   key={i}
                   type="button"
-                  className="shrink-0 w-[164px] rounded-2xl bg-[var(--very-light-green)] px-2.5 py-2 text-left hover:opacity-90 active:scale-[0.98] transition-transform"
+                  className="min-w-[164px] max-w-[164px] snap-start rounded-2xl bg-[var(--very-light-green)] px-2.5 py-2 text-left hover:opacity-90 active:scale-[0.98] transition-transform"
                   onClick={() => sendMessage(text)}
                 >
                   <span className="text-sm font-medium leading-[18px] text-[var(--brand-primary)]">
@@ -633,7 +612,7 @@ function AIChatView({
       </div>
 
       {/* Input area */}
-      <div className="shrink-0 flex flex-col gap-2 px-2.5 pb-2.5">
+      <div className="relative shrink-0 flex flex-col gap-2 px-2.5 pb-2.5 pt-4 before:pointer-events-none before:absolute before:inset-x-0 before:-top-8 before:h-8 before:bg-gradient-to-t before:from-white before:to-transparent">
         <div className="flex flex-col gap-2 rounded-2xl border-2 border-[var(--light-green)] bg-white p-2.5 shadow-[0px_0px_15px_0px_#dfdde2]">
           <div className="px-1.5">
             <textarea
@@ -654,7 +633,7 @@ function AIChatView({
               </span>
               <button type="button" className="flex items-center gap-0.5 rounded-2xl bg-[var(--very-light-gray)] px-1.5 py-[3px] text-sm font-medium tracking-[0.14px] text-[var(--medium-gray)]">
                 Metrics
-                <ChevronSmallIcon className="h-4 w-4 text-[var(--medium-gray)]" />
+                <ChevronDown size={14} className="text-[var(--medium-gray)]" />
               </button>
               <button
                 type="button"
@@ -666,7 +645,7 @@ function AIChatView({
                 }`}
               >
                 Suggestions
-                <ChevronSmallIcon className="h-4 w-4" />
+                <ChevronDown size={14} />
               </button>
             </div>
             <button
@@ -678,7 +657,7 @@ function AIChatView({
                 hasText ? "bg-[var(--light-green)] active:scale-95" : "bg-[#a9a9a6]"
               }`}
             >
-              <ArrowUpIcon />
+              <ArrowUp size={16} color="white" />
             </button>
           </div>
         </div>
@@ -708,6 +687,7 @@ export default function InsightsPage() {
   ]);
   const [activeConvId, setActiveConvId] = useState(1);
   const [showChatHistory, setShowChatHistory] = useState(false);
+  const [prefillText, setPrefillText] = useState("");
   const nextConvId = useRef(2);
 
   const hasActiveFilters = Object.values(activeFilters).some(Boolean);
@@ -736,6 +716,22 @@ export default function InsightsPage() {
 
   function handleSelectConversation(id: number) {
     setActiveConvId(id);
+  }
+
+  function handleAlertToChat(card: InsightCard) {
+    const newId = nextConvId.current++;
+    const prompt = `Validate this alert and suggest follow up actions:\n\nAlert details: "${card.title} ${card.description}"\nAthlete: ${card.title}\nCategory: ${card.category}`;
+    const newConv: Conversation = {
+      id: newId,
+      title: `Alert: ${card.title}`,
+      messages: [],
+      timestamp: "Now",
+    };
+    setConversations((prev) => [newConv, ...prev]);
+    setActiveConvId(newId);
+    setActiveTab("chat");
+    setShowChatHistory(false);
+    setPrefillText(prompt);
   }
 
   return (
@@ -768,41 +764,44 @@ export default function InsightsPage() {
         <button type="button" aria-label="Menu" className="flex h-10 w-10 items-center justify-center rounded-full hover:opacity-80">
           <MenuIcon />
         </button>
-        <div className="flex items-center gap-2 py-0.5">
+        <div className="flex items-center gap-2 py-[3px]">
           <span className="text-base font-semibold text-[var(--brand-primary)] whitespace-nowrap" style={{ fontFamily: "var(--font-open-sans)" }}>
             Gloucester Rugby
           </span>
           <span className="flex text-[var(--brand-primary)]">
-            <ChevronDownIcon />
+            <ChevronDown size={16} />
           </span>
         </div>
-        <div className="w-10" />
       </header>
 
       {/* Content area */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-2xl bg-white">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden pt-1">
         {/* Tab bar */}
         <div className="flex h-[47px] shrink-0 items-center justify-between border-b border-[var(--light-gray)] px-4">
           <div className="flex h-full gap-6">
             <button
               type="button"
               onClick={() => setActiveTab("alerts")}
-              className="flex h-full flex-col items-center justify-between pt-3"
+              className="flex h-full flex-col items-center gap-[10px]"
             >
-              <span className={`text-base font-semibold leading-5 ${activeTab === "alerts" ? "text-[var(--brand-primary)]" : "text-[var(--medium-gray)]"}`}>
-                AI alerts
-              </span>
-              <div className={`h-0.5 w-full rounded-full ${activeTab === "alerts" ? "bg-[var(--brand-primary)]" : "bg-transparent"}`} />
+              <div className="flex flex-1 items-center justify-center">
+                <span className={`text-base font-semibold leading-5 ${activeTab === "alerts" ? "text-[var(--brand-primary)]" : "text-[var(--medium-gray)]"}`}>
+                  AI alerts
+                </span>
+              </div>
+              <div className={`h-[2px] w-full ${activeTab === "alerts" ? "bg-[var(--light-green)]" : "bg-transparent"}`} />
             </button>
             <button
               type="button"
               onClick={() => setActiveTab("chat")}
-              className="flex h-full flex-col items-center justify-between pt-3"
+              className="flex h-full flex-col items-center gap-[10px]"
             >
-              <span className={`text-base font-semibold leading-5 ${activeTab === "chat" ? "text-[var(--brand-primary)]" : "text-[var(--medium-gray)]"}`}>
-                AI chat
-              </span>
-              <div className={`h-0.5 w-full rounded-full ${activeTab === "chat" ? "bg-[var(--brand-primary)]" : "bg-transparent"}`} />
+              <div className="flex flex-1 items-center justify-center">
+                <span className={`text-base font-semibold leading-5 ${activeTab === "chat" ? "text-[var(--brand-primary)]" : "text-[var(--medium-gray)]"}`}>
+                  AI chat
+                </span>
+              </div>
+              <div className={`h-[2px] w-full ${activeTab === "chat" ? "bg-[var(--light-green)]" : "bg-transparent"}`} />
             </button>
           </div>
 
@@ -811,13 +810,13 @@ export default function InsightsPage() {
               type="button"
               aria-label="Toggle filters"
               onClick={() => setShowFilters(!showFilters)}
-              className={`relative flex h-[34px] w-[34px] items-center justify-center rounded border transition-all active:scale-95 ${
+              className={`relative flex h-[34px] w-[34px] items-center justify-center rounded-[4px] border transition-all active:scale-95 ${
                 showFilters || hasActiveFilters
                   ? "border-[var(--light-green)] bg-[var(--very-light-green)] text-[var(--light-green)]"
-                  : "border-[var(--light-gray)] bg-white text-[var(--text-primary)] hover:bg-[var(--very-light-gray)]"
+                  : "border-[var(--light-gray)] text-[var(--text-primary)] hover:bg-[var(--very-light-gray)]"
               }`}
             >
-              <FilterIcon />
+              <Filter size={16} />
               {hasActiveFilters && (
                 <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--light-green)] text-[10px] font-bold text-white">
                   {Object.values(activeFilters).filter(Boolean).length}
@@ -825,44 +824,49 @@ export default function InsightsPage() {
               )}
             </button>
           ) : (
-            <div className="flex items-center gap-4">
-              <button type="button" aria-label="New chat" onClick={handleNewChat} className="flex h-[30px] w-[30px] items-center justify-center rounded border border-[var(--light-gray)] text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-transform">
-                <EditIcon />
+            <div className="flex items-center gap-2">
+              <button type="button" aria-label="New chat" onClick={handleNewChat} className="flex h-[34px] w-[34px] items-center justify-center rounded-[4px] border border-[var(--light-gray)] text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
+                <Edit size={16} />
               </button>
               <button
                 type="button"
                 aria-label="Chat history"
                 onClick={() => setShowChatHistory(!showChatHistory)}
-                className={`flex h-[30px] w-[30px] items-center justify-center rounded border transition-colors active:scale-95 ${
+                className={`flex h-[34px] w-[34px] items-center justify-center rounded-[4px] border transition-all active:scale-95 ${
                   showChatHistory
                     ? "border-[var(--light-green)] bg-[var(--very-light-green)] text-[var(--light-green)]"
                     : "border-[var(--light-gray)] text-[var(--text-primary)] hover:bg-[var(--very-light-gray)]"
                 }`}
               >
-                <MessageSquareIcon />
+                <MessageSquare size={16} />
               </button>
             </div>
           )}
         </div>
 
         {/* Tab content */}
-        {activeTab === "alerts" ? (
-          <AIAlertsView
-            showFilters={showFilters}
-            activeFilters={activeFilters}
-            onFilterChange={handleFilterChange}
-            onClearFilters={handleClearFilters}
-          />
-        ) : (
-          <AIChatView
-            conversations={conversations}
-            activeConvId={activeConvId}
-            onUpdateConversation={handleUpdateConversation}
-            showHistory={showChatHistory}
-            onSelectConversation={handleSelectConversation}
-            onCloseHistory={() => setShowChatHistory(false)}
-          />
-        )}
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white">
+          {activeTab === "alerts" ? (
+            <AIAlertsView
+              showFilters={showFilters}
+              activeFilters={activeFilters}
+              onFilterChange={handleFilterChange}
+              onClearFilters={handleClearFilters}
+              onSendToChat={handleAlertToChat}
+            />
+          ) : (
+            <AIChatView
+              conversations={conversations}
+              activeConvId={activeConvId}
+              onUpdateConversation={handleUpdateConversation}
+              showHistory={showChatHistory}
+              onSelectConversation={handleSelectConversation}
+              onCloseHistory={() => setShowChatHistory(false)}
+              prefillText={prefillText}
+              onPrefillConsumed={() => setPrefillText("")}
+            />
+          )}
+        </div>
       </div>
     </div>
   );
