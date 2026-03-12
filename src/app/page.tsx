@@ -224,61 +224,66 @@ function FilterDropdown({
   filterKey,
   selectedValue,
   onSelect,
+  isOpen,
+  onToggle,
 }: {
   filterKey: FilterKey;
   selectedValue: string | null;
   onSelect: (key: FilterKey, value: string | null) => void;
+  isOpen: boolean;
+  onToggle: (key: FilterKey) => void;
 }) {
-  const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const config = FILTER_OPTIONS[filterKey];
   const displayLabel = selectedValue ?? config.label;
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) onToggle(filterKey);
     }
-    if (open) document.addEventListener("mousedown", handleClickOutside);
+    if (isOpen) document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [open]);
+  }, [isOpen, filterKey, onToggle]);
 
   return (
     <div ref={ref} className="relative">
       <button
         type="button"
-        onClick={() => setOpen(!open)}
-        className={`flex items-center gap-1 rounded border px-2.5 py-1.5 text-sm font-medium transition-colors ${
+        onClick={() => onToggle(filterKey)}
+        className={`flex items-center gap-1 rounded border px-2.5 py-1.5 text-sm font-medium transition-all active:scale-[0.97] ${
           selectedValue
-            ? "border-[var(--light-green)] bg-white text-[#061d0e]"
-            : "border-[var(--light-gray)] bg-white text-[var(--text-primary)] hover:border-[var(--light-green)]"
+            ? "border-[var(--light-green)] bg-[var(--very-light-green)] text-[#061d0e]"
+            : isOpen
+              ? "border-[var(--light-green)] bg-white text-[var(--text-primary)] shadow-sm"
+              : "border-[var(--light-gray)] bg-white text-[var(--text-primary)] hover:border-[var(--medium-gray)]"
         }`}
       >
         {displayLabel}
-        <ChevronSmallIcon className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
+        <ChevronSmallIcon className={`h-4 w-4 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
       </button>
 
-      {open && (
-        <div className="absolute left-0 top-full z-20 mt-1 w-max min-w-full overflow-hidden rounded-lg border border-[var(--light-gray)] bg-white shadow-lg">
+      {isOpen && (
+        <div className="absolute left-0 top-full z-20 mt-1.5 w-max min-w-[180px] overflow-hidden rounded-xl border border-[var(--light-gray)] bg-white shadow-lg animate-in fade-in slide-in-from-top-1">
           {selectedValue && (
             <button
               type="button"
-              onClick={() => { onSelect(filterKey, null); setOpen(false); }}
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text-muted)] hover:bg-[var(--very-light-gray)]"
+              onClick={() => { onSelect(filterKey, null); onToggle(filterKey); }}
+              className="flex w-full items-center gap-2 border-b border-[var(--light-gray)] px-3 py-2.5 text-left text-sm text-[var(--text-muted)] hover:bg-[var(--very-light-gray)]"
             >
-              {config.label}
+              Clear selection
             </button>
           )}
           {config.options.map((opt) => (
             <button
               key={opt}
               type="button"
-              onClick={() => { onSelect(filterKey, opt); setOpen(false); }}
-              className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--very-light-gray)] ${
-                selectedValue === opt ? "font-semibold text-[var(--light-green)]" : "text-[var(--text-primary)]"
+              onClick={() => { onSelect(filterKey, opt); onToggle(filterKey); }}
+              className={`flex w-full items-center justify-between px-3 py-2.5 text-left text-sm transition-colors hover:bg-[var(--very-light-gray)] ${
+                selectedValue === opt ? "font-semibold text-[var(--light-green)] bg-[var(--very-light-green)]" : "text-[var(--text-primary)]"
               }`}
             >
+              <span>{opt}</span>
               {selectedValue === opt && <CheckIcon />}
-              {opt}
             </button>
           ))}
         </div>
@@ -300,10 +305,17 @@ function AIAlertsView({
   onFilterChange: (key: FilterKey, value: string | null) => void;
   onClearFilters: () => void;
 }) {
+  const [openDropdown, setOpenDropdown] = useState<FilterKey | null>(null);
+
   const hasActiveFilters = Object.values(activeFilters).some(Boolean);
   const chipEntries = (Object.entries(activeFilters) as [FilterKey, string | null][]).filter(
     ([, v]) => v !== null
   );
+  const filterCount = chipEntries.length;
+
+  const handleToggle = useCallback((key: FilterKey) => {
+    setOpenDropdown((prev) => (prev === key ? null : key));
+  }, []);
 
   const filteredInsights = INSIGHTS.filter((card) => {
     if (activeFilters.severity && card.severity !== activeFilters.severity) return false;
@@ -315,47 +327,77 @@ function AIAlertsView({
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       {showFilters && (
-        <div className="shrink-0">
-          {hasActiveFilters ? (
-            /* Show only the chips when filters are applied */
-            <div className="flex flex-wrap items-center gap-2 bg-[#ededea] px-2 py-2.5">
+        <div className="shrink-0 border-b border-[var(--light-gray)]">
+          {/* Dropdown row – always visible when filter panel is open */}
+          <div className="flex flex-wrap gap-2 bg-white px-4 py-2.5">
+            {(Object.keys(FILTER_OPTIONS) as FilterKey[]).map((key) => (
+              <FilterDropdown
+                key={key}
+                filterKey={key}
+                selectedValue={activeFilters[key]}
+                onSelect={onFilterChange}
+                isOpen={openDropdown === key}
+                onToggle={handleToggle}
+              />
+            ))}
+          </div>
+
+          {/* Active filter chips – only when selections exist */}
+          {hasActiveFilters && (
+            <div className="flex flex-wrap items-center gap-2 bg-[#ededea] px-3 py-2.5">
+              <span className="mr-0.5 text-xs font-medium text-[var(--text-muted)]">
+                {filterCount} active
+              </span>
               {chipEntries.map(([key, value]) => (
                 <span
                   key={key}
-                  className="flex items-center gap-1.5 rounded border border-[var(--light-green)] bg-[#fefefe] py-1.5 pl-2.5 pr-2 text-sm font-medium text-[#061d0e]"
+                  className="flex items-center gap-1 rounded-lg border border-[var(--light-green)] bg-[#fefefe] py-1 pl-2.5 pr-1.5 text-sm font-medium text-[#061d0e] transition-all hover:bg-white hover:shadow-sm"
                 >
                   {value}
-                  <button type="button" aria-label={`Remove ${value}`} onClick={() => onFilterChange(key, null)} className="text-[#061d0e] hover:opacity-70">
+                  <button
+                    type="button"
+                    aria-label={`Remove ${value}`}
+                    onClick={() => onFilterChange(key, null)}
+                    className="ml-0.5 flex h-5 w-5 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--light-gray)] hover:text-[var(--text-primary)]"
+                  >
                     <CloseSmallIcon />
                   </button>
                 </span>
               ))}
-              <button type="button" onClick={onClearFilters} className="text-sm font-medium text-[var(--light-green)] underline">
+              <button
+                type="button"
+                onClick={onClearFilters}
+                className="ml-auto text-sm font-medium text-[var(--light-green)] underline decoration-[var(--light-green)]/40 underline-offset-2 transition-colors hover:text-[var(--brand-primary)]"
+              >
                 Clear all
               </button>
-            </div>
-          ) : (
-            /* Show dropdowns when no filters are applied yet */
-            <div className="flex flex-wrap gap-2 border-b border-[var(--light-gray)] bg-white px-4 py-2.5">
-              {(Object.keys(FILTER_OPTIONS) as FilterKey[]).map((key) => (
-                <FilterDropdown
-                  key={key}
-                  filterKey={key}
-                  selectedValue={activeFilters[key]}
-                  onSelect={onFilterChange}
-                />
-              ))}
             </div>
           )}
         </div>
       )}
 
+      {/* Results count */}
+      {showFilters && hasActiveFilters && (
+        <div className="shrink-0 bg-white px-4 py-2">
+          <p className="text-xs font-medium text-[var(--text-muted)]">
+            {filteredInsights.length} {filteredInsights.length === 1 ? "result" : "results"}
+          </p>
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto">
         {filteredInsights.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-2 py-20 text-center">
+          <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--very-light-gray)] text-[var(--text-muted)]">
+              <FilterIcon />
+            </div>
             <p className="text-base font-medium text-[var(--text-primary)]">No alerts match</p>
-            <p className="text-sm text-[var(--text-muted)]">Try adjusting your filters.</p>
-            <button type="button" onClick={onClearFilters} className="mt-2 text-sm font-medium text-[var(--light-green)] underline">
+            <p className="max-w-[200px] text-sm text-[var(--text-muted)]">Try removing some filters to see more results.</p>
+            <button
+              type="button"
+              onClick={onClearFilters}
+              className="mt-1 rounded-lg bg-[var(--very-light-green)] px-4 py-2 text-sm font-medium text-[var(--light-green)] transition-colors hover:bg-[#d4efd2]"
+            >
               Clear all filters
             </button>
           </div>
@@ -675,13 +717,18 @@ export default function InsightsPage() {
               type="button"
               aria-label="Toggle filters"
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex h-[34px] w-[34px] items-center justify-center rounded border transition-colors ${
+              className={`relative flex h-[34px] w-[34px] items-center justify-center rounded border transition-all active:scale-95 ${
                 showFilters || hasActiveFilters
                   ? "border-[var(--light-green)] bg-[var(--very-light-green)] text-[var(--light-green)]"
                   : "border-[var(--light-gray)] bg-white text-[var(--text-primary)] hover:bg-[var(--very-light-gray)]"
               }`}
             >
               <FilterIcon />
+              {hasActiveFilters && (
+                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--light-green)] text-[10px] font-bold text-white">
+                  {Object.values(activeFilters).filter(Boolean).length}
+                </span>
+              )}
             </button>
           ) : (
             <div className="flex items-center gap-4">
