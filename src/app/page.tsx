@@ -151,18 +151,18 @@ function InsightCardItem({ card, onSendToChat }: { card: InsightCard; onSendToCh
           {card.updated}
         </p>
         <div className="flex gap-2.5 items-center">
-          <button type="button" aria-label="More info" className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[var(--very-light-gray)] text-[var(--text-primary)] hover:bg-[var(--light-gray)]">
+          <button type="button" aria-label="More info" className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[var(--very-light-gray)] text-[var(--text-primary)] hover:bg-[var(--light-gray)] hover:scale-105 active:scale-95 transition-all duration-150">
             <Info size={18} />
           </button>
-          <button type="button" aria-label="Send to AI chat" onClick={() => onSendToChat(card)} className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[var(--very-light-gray)] text-[var(--text-primary)] hover:bg-[var(--light-gray)] active:scale-95 transition-transform">
+          <button type="button" aria-label="Send to AI chat" onClick={() => onSendToChat(card)} className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[var(--very-light-gray)] text-[var(--text-primary)] hover:bg-[var(--light-gray)] hover:scale-105 active:scale-95 transition-all duration-150">
             <Zap size={18} />
           </button>
           <button
             type="button"
             aria-label="Copy"
             onClick={handleCopy}
-            className={`flex h-8 w-8 items-center justify-center rounded-2xl transition-colors ${
-              copied ? "bg-[var(--very-light-green)] text-[var(--light-green)]" : "bg-[var(--very-light-gray)] text-[var(--text-primary)] hover:bg-[var(--light-gray)]"
+            className={`flex h-8 w-8 items-center justify-center rounded-2xl transition-all duration-150 ${
+              copied ? "bg-[var(--very-light-green)] text-[var(--light-green)] animate-pop-in" : "bg-[var(--very-light-gray)] text-[var(--text-primary)] hover:bg-[var(--light-gray)] hover:scale-105 active:scale-95"
             }`}
           >
             {copied ? <Check size={16} /> : <Copy size={18} />}
@@ -190,6 +190,16 @@ function FilterItem({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const config = FILTER_OPTIONS[filterKey];
+  const [alignRight, setAlignRight] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const container = ref.current.closest("[data-app-root]");
+      const maxRight = container ? container.getBoundingClientRect().right : window.innerWidth;
+      setAlignRight(rect.left + 200 > maxRight);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -217,7 +227,7 @@ function FilterItem({
         </span>
 
         {isOpen && (
-          <div className="absolute left-0 top-full z-20 mt-1.5 w-max min-w-[180px] overflow-hidden rounded-xl border border-[var(--light-gray)] bg-white shadow-lg animate-in">
+          <div className={`absolute top-full z-40 mt-1.5 w-max min-w-[180px] overflow-hidden rounded-xl border border-[var(--light-gray)] bg-white shadow-lg animate-in ${alignRight ? "right-0" : "left-0"}`}>
             {config.options.map((opt) => (
               <button
                 key={opt}
@@ -253,7 +263,7 @@ function FilterItem({
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-full z-20 mt-1.5 w-max min-w-[180px] overflow-hidden rounded-xl border border-[var(--light-gray)] bg-white shadow-lg animate-in">
+        <div className={`absolute top-full z-40 mt-1.5 w-max min-w-[180px] overflow-hidden rounded-xl border border-[var(--light-gray)] bg-white shadow-lg animate-in ${alignRight ? "right-0" : "left-0"}`}>
           {config.options.map((opt) => (
             <button
               key={opt}
@@ -301,9 +311,9 @@ function AIAlertsView({
   });
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="flex flex-1 flex-col min-h-0">
       {showFilters && (
-        <div className="shrink-0 border-b border-[var(--light-gray)]">
+        <div className="shrink-0 border-b border-[var(--light-gray)] animate-slide-down relative z-30">
           <div className="flex flex-wrap items-center gap-2 bg-white px-4 py-2.5">
             {(Object.keys(FILTER_OPTIONS) as FilterKey[]).map((key) => (
               <FilterItem
@@ -338,7 +348,7 @@ function AIAlertsView({
 
       <div className="flex-1 overflow-y-auto">
         {filteredInsights.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
+          <div className="flex flex-col items-center justify-center gap-3 py-20 text-center animate-fade-in">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--very-light-gray)] text-[var(--text-muted)]">
               <Filter size={20} />
             </div>
@@ -353,7 +363,11 @@ function AIAlertsView({
             </button>
           </div>
         ) : (
-          filteredInsights.map((card, i) => <InsightCardItem key={i} card={card} onSendToChat={onSendToChat} />)
+          filteredInsights.map((card, i) => (
+            <div key={i} className="animate-fade-up" style={{ animationDelay: `${i * 60}ms` }}>
+              <InsightCardItem card={card} onSendToChat={onSendToChat} />
+            </div>
+          ))
         )}
       </div>
     </div>
@@ -371,7 +385,7 @@ type ChatMessage = {
 /* ── Typing dots animation ── */
 function TypingIndicator() {
   return (
-    <div className="flex items-start gap-2 px-4 py-3">
+    <div className="flex items-start gap-2 px-4 py-3 animate-fade-up">
       <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--very-light-green)] text-[var(--light-green)]">
         <Zap size={14} />
       </div>
@@ -388,7 +402,7 @@ function TypingIndicator() {
 function ChatBubble({ msg }: { msg: ChatMessage }) {
   const isUser = msg.role === "user";
   return (
-    <div className={`flex items-start gap-2 px-4 py-1.5 ${isUser ? "flex-row-reverse" : ""}`}>
+    <div className={`flex items-start gap-2 px-4 py-1.5 animate-fade-up ${isUser ? "flex-row-reverse" : ""}`}>
       {!isUser && (
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--very-light-green)] text-[var(--light-green)]">
           <Zap size={14} />
@@ -449,14 +463,15 @@ function ChatHistoryPanel({
             <p className="text-sm text-[var(--text-muted)]">No conversations yet</p>
           </div>
         ) : (
-          conversations.map((conv) => (
+          conversations.map((conv, i) => (
             <button
               key={conv.id}
               type="button"
               onClick={() => { onSelect(conv.id); onClose(); }}
-              className={`flex w-full flex-col gap-1 border-b border-[var(--light-gray)] px-4 py-3 text-left transition-colors hover:bg-[var(--very-light-gray)] ${
+              className={`flex w-full flex-col gap-1 border-b border-[var(--light-gray)] px-4 py-3 text-left transition-colors hover:bg-[var(--very-light-gray)] animate-fade-up ${
                 conv.id === activeConvId ? "bg-[var(--very-light-green)]" : ""
               }`}
+              style={{ animationDelay: `${i * 50}ms` }}
             >
               <span className="text-sm font-semibold text-[var(--text-primary)] line-clamp-1">{conv.title}</span>
               <span className="text-xs text-[var(--text-muted)]">
@@ -589,7 +604,8 @@ function AIChatView({
                 <button
                   key={i}
                   type="button"
-                  className="min-w-[164px] max-w-[164px] snap-start rounded-2xl bg-[var(--very-light-green)] px-2.5 py-2 text-left hover:opacity-90 active:scale-[0.98] transition-transform"
+                  className="min-w-[164px] max-w-[164px] snap-start rounded-2xl bg-[var(--very-light-green)] px-2.5 py-2 text-left hover:opacity-90 active:scale-[0.98] transition-transform animate-slide-in-right"
+                  style={{ animationDelay: `${i * 80}ms` }}
                   onClick={() => sendMessage(text)}
                 >
                   <span className="text-sm font-medium leading-[18px] text-[var(--brand-primary)]">
@@ -735,7 +751,7 @@ export default function InsightsPage() {
   }
 
   return (
-    <div className="mx-auto flex h-screen max-w-[375px] flex-col bg-[var(--very-light-gray)]">
+    <div data-app-root className="mx-auto flex h-screen max-w-[375px] flex-col bg-[var(--very-light-gray)]">
       {/* Status bar */}
       <div className="flex h-[54px] w-full shrink-0 items-center justify-between px-6 pt-3">
         <span className="text-[15px] font-semibold tracking-[-0.28px] text-black">9:41</span>
