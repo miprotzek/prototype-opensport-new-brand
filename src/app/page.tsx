@@ -1,58 +1,94 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
-// Icons as inline SVGs (no external assets)
-function MenuIcon({ className }: { className?: string }) {
+/* ─── Icon Components ─── */
+
+function MenuIcon() {
   return (
-    <svg className={className} width="40" height="40" viewBox="0 0 40 40" fill="none">
+    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
       <circle cx="20" cy="20" r="20" fill="#f8f7f3" />
-      <path d="M12 14h16M12 20h16M12 26h16" stroke="#212121" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M12 14h16M12 20h16M12 26h16" stroke="#1e3c20" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   );
 }
 
-function ChevronDownIcon({ className }: { className?: string }) {
+function ChevronDownIcon() {
   return (
-    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-function PlusIcon({ className }: { className?: string }) {
+function ChevronSmallIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} width="20" height="20" viewBox="0 0 20 20" fill="none">
+    <svg className={className} width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M5 7l3 3 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
       <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
 
-function InfoIcon({ className }: { className?: string }) {
+function EditIcon() {
   return (
-    <svg className={className} width="20" height="20" viewBox="0 0 20 20" fill="none">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M11.5 1.5l3 3L5 14H2v-3L11.5 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9.5 3.5l3 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function MessageSquareIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M2 2h12v9H5l-3 3V2z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ArrowUpIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M8 13V3M8 3l-4 4M8 3l4 4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function InfoIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
       <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5" />
       <path d="M10 9v4M10 7v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   );
 }
 
-function ShareIcon({ className }: { className?: string }) {
+function ShareIcon() {
   return (
-    <svg className={className} width="20" height="20" viewBox="0 0 20 20" fill="none">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
       <path d="M15 7l-5-4v3c-4 0-7 2.5-7 6 1-2 3-3 5-3h2v3l5-4z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-function CopyIcon({ className }: { className?: string }) {
+function CopyIcon() {
   return (
-    <svg className={className} width="20" height="20" viewBox="0 0 20 20" fill="none">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
       <rect x="6" y="6" width="11" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
       <path d="M4 14V4a1 1 0 011-1h9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   );
 }
+
+/* ─── Data ─── */
 
 type InsightCard = {
   category: string;
@@ -107,34 +143,42 @@ const INSIGHTS: InsightCard[] = [
   },
 ];
 
+const SUGGESTIONS = [
+  "Who reached the highest top speed during match day warmup?",
+  "Which forwards covered the most total distance in training this week?",
+  "Which players recorded the most high-intensity efforts this week?",
+];
+
+/* ─── Sub-components ─── */
+
 function InsightCardItem({ card }: { card: InsightCard }) {
   return (
     <article className="flex flex-col gap-4 border-b border-[var(--light-gray)] bg-white p-4 shadow-[0px_4px_20px_0px_rgba(0,0,0,0.02)]">
       <div className="flex flex-col gap-4">
-        <p className="text-sm font-medium leading-5 text-[var(--brand-primary)]" style={{ fontFamily: "var(--font-geist-sans)" }}>
+        <p className="text-sm font-medium leading-5 text-[var(--brand-primary)]">
           {card.category}
         </p>
         <div className="flex gap-2.5 items-start">
           <div className={`w-1 shrink-0 self-stretch rounded-full ${card.accentColor}`} />
           <p className="min-w-0 flex-1 text-base font-semibold leading-[22px] tracking-[-0.32px] text-[var(--text-primary)]">
-            <span className="font-semibold">{card.title}</span>
-            <span className="font-normal"> {card.description}</span>
+            <span className="font-semibold">{card.title} </span>
+            <span className="font-normal">{card.description}</span>
           </p>
         </div>
       </div>
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium leading-5 text-[var(--text-muted)] whitespace-nowrap" style={{ fontFamily: "var(--font-geist-sans)" }}>
+        <p className="text-sm font-medium leading-5 text-[var(--text-muted)] whitespace-nowrap">
           {card.updated}
         </p>
         <div className="flex gap-2.5 items-center">
           <button type="button" aria-label="More info" className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[var(--very-light-gray)] text-[var(--text-primary)] hover:bg-[var(--light-gray)]">
-            <InfoIcon className="h-5 w-5" />
+            <InfoIcon />
           </button>
           <button type="button" aria-label="Share" className="flex h-8 w-8 items-center justify-center text-[var(--text-primary)] hover:opacity-80">
-            <ShareIcon className="h-8 w-8" />
+            <ShareIcon />
           </button>
           <button type="button" aria-label="Copy" className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[var(--very-light-gray)] text-[var(--text-primary)] hover:bg-[var(--light-gray)]">
-            <CopyIcon className="h-5 w-5" />
+            <CopyIcon />
           </button>
         </div>
       </div>
@@ -142,32 +186,108 @@ function InsightCardItem({ card }: { card: InsightCard }) {
   );
 }
 
+function AIChatView() {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  return (
+    <div className="flex flex-1 flex-col justify-end bg-white">
+      {/* Suggestion cards – horizontal scroll */}
+      <div className="px-2.5 pt-2.5">
+        <div
+          ref={scrollRef}
+          className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide"
+        >
+          {SUGGESTIONS.map((text, i) => (
+            <button
+              key={i}
+              type="button"
+              className="shrink-0 w-[164px] rounded-2xl bg-[var(--very-light-green)] px-2.5 py-2 text-left hover:opacity-90"
+            >
+              <span className="text-sm font-medium leading-[18px] text-[var(--brand-primary)]">
+                {text}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Chat input area */}
+      <div className="flex flex-col gap-2 px-2.5 pb-2.5">
+        <div className="flex flex-col gap-2 rounded-2xl border-2 border-[var(--light-green)] bg-white p-2.5 shadow-[0px_0px_15px_0px_#dfdde2]">
+          {/* Placeholder text */}
+          <div className="px-1.5">
+            <p className="text-base leading-6 text-[#a9a9a6]">
+              Type # to browse Drills, Sessions, and Timeframes, @ for Participants, and ! for Metrics.
+            </p>
+          </div>
+
+          {/* Filter chips + send button */}
+          <div className="flex items-center gap-2">
+            <div className="flex flex-1 flex-wrap items-center gap-2">
+              <span className="rounded-2xl bg-[var(--very-light-green)] px-1.5 py-[3px] text-sm font-medium tracking-[0.14px] text-[var(--medium-gray)]">
+                GPS data
+              </span>
+              <button type="button" className="flex items-center gap-0.5 rounded-2xl bg-[var(--very-light-gray)] px-1.5 py-[3px] text-sm font-medium tracking-[0.14px] text-[var(--medium-gray)]">
+                Metrics
+                <ChevronSmallIcon className="h-4 w-4 text-[var(--medium-gray)]" />
+              </button>
+              <button type="button" className="flex items-center gap-1 rounded-2xl bg-[var(--very-light-gray)] px-1.5 py-[3px] text-sm font-medium tracking-[0.14px] text-[var(--medium-gray)]">
+                Suggestions
+                <ChevronSmallIcon className="h-4 w-4 text-[var(--medium-gray)]" />
+              </button>
+            </div>
+            <button
+              type="button"
+              aria-label="Send message"
+              className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-[#a9a9a6]"
+            >
+              <ArrowUpIcon />
+            </button>
+          </div>
+        </div>
+
+        {/* Disclaimer */}
+        <p className="text-center text-xs leading-normal text-[var(--medium-gray)]">
+          OpenSport AI can make mistakes. Check important info.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Main Page ─── */
+
 export default function InsightsPage() {
   const [activeTab, setActiveTab] = useState<"alerts" | "chat">("alerts");
 
   return (
-    <div className="flex min-h-screen w-full flex-col items-center bg-[var(--very-light-gray)]" style={{ maxWidth: 375, margin: "0 auto" }}>
+    <div className="mx-auto flex h-screen max-w-[375px] flex-col bg-[var(--very-light-gray)]">
       {/* Status bar */}
-      <div className="flex h-[54px] w-full max-w-[375px] items-center justify-between px-6 pt-3">
+      <div className="flex h-[54px] w-full items-center justify-between px-6 pt-3 shrink-0">
         <span className="text-[15px] font-semibold tracking-[-0.28px] text-black">9:41</span>
         <div className="flex items-center gap-1.5">
           <svg width="18" height="12" viewBox="0 0 18 12" fill="none">
-            <path d="M1 6c0-2.5 1.5-5 4-5s3 2.5 4 5 1.5 5 4 5 4-2.5 4-5" stroke="black" strokeWidth="1.2" strokeLinecap="round" />
+            <rect x="1" y="3" width="3" height="9" rx="1" fill="black" />
+            <rect x="5.5" y="2" width="3" height="10" rx="1" fill="black" />
+            <rect x="10" y="1" width="3" height="11" rx="1" fill="black" />
+            <rect x="14.5" y="0" width="3" height="12" rx="1" fill="black" />
           </svg>
           <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
-            <path d="M1 6l2-3 2 2 3-4 3 4 2-2 2 3" stroke="black" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M8 3.6C9.8 3.6 11.4 4.3 12.6 5.4L14 4C12.4 2.5 10.3 1.6 8 1.6S3.6 2.5 2 4l1.4 1.4C4.6 4.3 6.2 3.6 8 3.6z" fill="black" />
+            <path d="M8 7.2c1 0 1.9.4 2.6 1L12 6.8c-1.1-1-2.5-1.6-4-1.6s-2.9.6-4 1.6L5.4 8.2C6.1 7.6 7 7.2 8 7.2z" fill="black" />
+            <circle cx="8" cy="10.4" r="1.6" fill="black" />
           </svg>
-          <svg width="25" height="12" viewBox="0 0 25 12" fill="none">
-            <rect x="0.5" y="0.5" width="21" height="11" rx="2.5" stroke="black" strokeWidth="1" />
-            <rect x="3" y="3" width="7" height="6" rx="0.5" fill="black" />
-            <path d="M12 4v5M15 4v5M18 4v5" stroke="black" strokeWidth="1" strokeLinecap="round" />
+          <svg width="27" height="13" viewBox="0 0 27 13" fill="none">
+            <rect x="0.5" y="0.5" width="22" height="12" rx="2.5" stroke="black" strokeOpacity="0.35" />
+            <rect x="2" y="2" width="18" height="9" rx="1.5" fill="black" />
+            <path d="M24 4.5v4a2.5 2.5 0 000-4z" fill="black" fillOpacity="0.4" />
           </svg>
         </div>
       </div>
 
       {/* Header */}
-      <header className="flex w-full items-center justify-between px-4 pb-2">
-        <button type="button" className="flex h-10 w-10 items-center justify-center rounded-full hover:opacity-80" aria-label="Menu">
+      <header className="flex w-full items-center justify-between px-4 pb-2 shrink-0">
+        <button type="button" aria-label="Menu" className="flex h-10 w-10 items-center justify-center rounded-full hover:opacity-80">
           <MenuIcon />
         </button>
         <div className="flex items-center gap-2 py-0.5">
@@ -181,46 +301,60 @@ export default function InsightsPage() {
         <div className="w-10" />
       </header>
 
-      {/* Tabs */}
-      <div className="w-full rounded-t-2xl overflow-hidden bg-white">
-        <div className="flex h-[47px] items-center justify-between border-b border-[var(--light-gray)] px-4">
+      {/* Content area (tabs + body) – fills remaining height */}
+      <div className="flex min-h-0 flex-1 flex-col rounded-t-2xl overflow-hidden bg-white">
+        {/* Tab bar */}
+        <div className="flex h-[47px] shrink-0 items-center justify-between border-b border-[var(--light-gray)] px-4">
           <div className="flex h-full gap-6">
             <button
               type="button"
               onClick={() => setActiveTab("alerts")}
-              className="flex flex-col items-center justify-center gap-2.5 min-w-[64px] pt-0"
+              className="flex h-full flex-col items-center justify-between pt-3"
             >
               <span className={`text-base font-semibold leading-5 ${activeTab === "alerts" ? "text-[var(--brand-primary)]" : "text-[var(--medium-gray)]"}`}>
                 AI alerts
               </span>
-              <div className={`h-0.5 w-full ${activeTab === "alerts" ? "bg-[var(--brand-primary)]" : "bg-transparent"}`} />
+              <div className={`h-0.5 w-full rounded-full ${activeTab === "alerts" ? "bg-[var(--brand-primary)]" : "bg-transparent"}`} />
             </button>
             <button
               type="button"
               onClick={() => setActiveTab("chat")}
-              className="flex flex-col items-center justify-center gap-2.5 pt-0"
+              className="flex h-full flex-col items-center justify-between pt-3"
             >
               <span className={`text-base font-semibold leading-5 ${activeTab === "chat" ? "text-[var(--brand-primary)]" : "text-[var(--medium-gray)]"}`}>
                 AI chat
               </span>
-              <div className={`h-0.5 w-11 ${activeTab === "chat" ? "bg-[var(--brand-primary)]" : "bg-transparent"}`} />
+              <div className={`h-0.5 w-full rounded-full ${activeTab === "chat" ? "bg-[var(--brand-primary)]" : "bg-transparent"}`} />
             </button>
           </div>
-          <button type="button" className="flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-primary)] hover:bg-[var(--very-light-gray)]" aria-label="Add">
-            <PlusIcon className="h-5 w-5" />
-          </button>
-        </div>
 
-        {/* Content */}
-        <div className="flex flex-col">
-          {activeTab === "alerts" && INSIGHTS.map((card, i) => <InsightCardItem key={i} card={card} />)}
-          {activeTab === "chat" && (
-            <div className="flex flex-1 flex-col items-center justify-center gap-4 py-16 px-4 text-center">
-              <p className="text-base text-[var(--medium-gray)]">AI chat</p>
-              <p className="text-sm text-[var(--text-muted)]">Start a conversation with the AI assistant.</p>
+          {/* Tab-bar actions */}
+          {activeTab === "alerts" ? (
+            <button type="button" aria-label="Add" className="flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-primary)] hover:bg-[var(--very-light-gray)]">
+              <PlusIcon />
+            </button>
+          ) : (
+            <div className="flex items-center gap-4">
+              <button type="button" aria-label="New chat" className="flex h-[30px] w-[30px] items-center justify-center rounded border border-[var(--light-gray)] text-[var(--text-primary)] hover:bg-[var(--very-light-gray)]">
+                <EditIcon />
+              </button>
+              <button type="button" aria-label="Chat history" className="flex h-[30px] w-[30px] items-center justify-center rounded border border-[var(--light-gray)] text-[var(--text-primary)] hover:bg-[var(--very-light-gray)]">
+                <MessageSquareIcon />
+              </button>
             </div>
           )}
         </div>
+
+        {/* Tab content */}
+        {activeTab === "alerts" ? (
+          <div className="flex-1 overflow-y-auto">
+            {INSIGHTS.map((card, i) => (
+              <InsightCardItem key={i} card={card} />
+            ))}
+          </div>
+        ) : (
+          <AIChatView />
+        )}
       </div>
     </div>
   );
