@@ -1,16 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fafafa;
-  --foreground: #18181b;
-  --brand-primary: #18181b;
-  --very-light-gray: #f4f4f5;
-  --light-gray: #e4e4e7;
-  --medium-gray: #71717a;
-  --text-primary: #18181b;
-  --text-muted: #a1a1aa;
-  --very-light-green: #ecfdf5;
-  --light-green: #34d399;
+  --background: #ffffff;
+  --foreground: #171717;
+  /* OpenSport design tokens */
+  --brand-primary: #1e7a35;
+  --very-light-gray: #F8F7F3;
+  --light-gray: #e5e5e5;
+  --medium-gray: #666666;
+  --text-primary: #171717;
+  --text-muted: #999999;
+  --very-light-green: #e5f3e3;
+  --light-green: #2d8a3e;
 }
 
 .scrollbar-hide::-webkit-scrollbar {
@@ -116,8 +117,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #fafafa;
-    --foreground: #18181b;
+    --background: #ffffff;
+    --foreground: #171717;
   }
 }
 

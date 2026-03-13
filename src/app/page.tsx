@@ -28,6 +28,7 @@ import {
   Settings,
   ToggleLeft,
   ToggleRight,
+  Download,
 } from "react-feather";
 
 /* ═══════════════════ Drag Scroll ═══════════════════ */
@@ -99,6 +100,8 @@ type PlayerAlert = {
   metrics: { label: string; value: string }[];
   explanation: string;
   recommendations: string[];
+  thresholdRule?: string;
+  trendData?: Record<"7d" | "14d" | "28d", number[]>;
 };
 
 const PLAYER_ALERTS: PlayerAlert[] = [
@@ -117,6 +120,12 @@ const PLAYER_ALERTS: PlayerAlert[] = [
     ],
     explanation: "Jack's recent load increased faster than his normal baseline, which may indicate elevated fatigue or overload risk.",
     recommendations: ["Review training volume", "Monitor next session", "Validate with staff context"],
+    thresholdRule: "Alert fires when acute:chronic ratio exceeds 1.20",
+    trendData: {
+      "7d": [1.02, 1.05, 1.08, 1.12, 1.18, 1.28, 1.41],
+      "14d": [0.98, 1.0, 1.02, 1.04, 1.06, 1.08, 1.1, 1.12, 1.15, 1.2, 1.25, 1.3, 1.35, 1.41],
+      "28d": [0.95, 0.97, 0.99, 1.0, 1.01, 1.02, 1.03, 1.04, 1.05, 1.06, 1.07, 1.08, 1.1, 1.12, 1.14, 1.16, 1.18, 1.2, 1.22, 1.25, 1.28, 1.32, 1.35, 1.38, 1.39, 1.4, 1.4, 1.41],
+    },
   },
   {
     id: 2, name: "Deian Gwynne", state: "at-risk", severity: "Medium",
@@ -133,6 +142,12 @@ const PLAYER_ALERTS: PlayerAlert[] = [
     ],
     explanation: "Deian's recent training load has dropped below his established baseline, which may indicate under-training or recovery from an unreported issue.",
     recommendations: ["Check for unreported injury", "Review recent attendance", "Adjust training plan if needed"],
+    thresholdRule: "Alert fires when load deviates more than ±20% from 28-day baseline",
+    trendData: {
+      "7d": [245, 238, 225, 210, 195, 185, 179.2],
+      "14d": [255, 252, 248, 245, 240, 235, 228, 220, 212, 205, 198, 192, 186, 179.2],
+      "28d": [250, 251, 252, 250, 248, 245, 242, 238, 232, 225, 218, 210, 202, 195, 188, 182, 178, 175, 173, 172, 171, 170, 170, 175, 178, 179, 179.2, 179.2],
+    },
   },
   {
     id: 3, name: "Max Llewellyn", state: "at-risk", severity: "Medium",
@@ -149,6 +164,12 @@ const PLAYER_ALERTS: PlayerAlert[] = [
     ],
     explanation: "Max's recent training volume has spiked significantly above his normal range, increasing the risk of overuse injury.",
     recommendations: ["Reduce session intensity", "Monitor fatigue markers", "Consider rest day"],
+    thresholdRule: "Alert fires when load deviates more than ±20% from 28-day baseline",
+    trendData: {
+      "7d": [255, 280, 320, 365, 410, 445, 475.6],
+      "14d": [248, 250, 255, 265, 280, 300, 325, 350, 375, 400, 420, 440, 455, 475.6],
+      "28d": [245, 246, 248, 250, 255, 260, 268, 278, 290, 305, 322, 340, 358, 375, 392, 408, 425, 440, 452, 460, 465, 468, 472, 474, 475, 475.6, 475.6, 475.6],
+    },
   },
   {
     id: 4, name: "Ben Loader", state: "load-imbalance", severity: "Medium",
@@ -165,6 +186,12 @@ const PLAYER_ALERTS: PlayerAlert[] = [
     ],
     explanation: "Ben's speed output decreased in the final quarter, suggesting accumulated fatigue during match play.",
     recommendations: ["Review conditioning program", "Check hydration protocol", "Monitor in next match"],
+    thresholdRule: "Alert fires when Q4 max speed drops more than 8% vs Q1-3 average",
+    trendData: {
+      "7d": [7.5, 7.55, 7.6, 7.65, 7.68, 7.7, 6.93],
+      "14d": [7.4, 7.45, 7.5, 7.55, 7.58, 7.6, 7.62, 7.65, 7.67, 7.68, 7.69, 7.7, 7.7, 6.93],
+      "28d": [7.2, 7.25, 7.3, 7.35, 7.4, 7.45, 7.5, 7.55, 7.58, 7.6, 7.62, 7.64, 7.66, 7.68, 7.69, 7.7, 7.7, 7.7, 7.7, 7.7, 7.7, 7.7, 7.7, 7.7, 7.7, 7.7, 7.7, 6.93],
+    },
   },
   {
     id: 5, name: "Josh Basham", state: "load-imbalance", severity: "High",
@@ -181,6 +208,12 @@ const PLAYER_ALERTS: PlayerAlert[] = [
     ],
     explanation: "Josh showed a significant drop in speed output in the final quarter, well above the acceptable threshold.",
     recommendations: ["Assess match fitness", "Review workload distribution", "Consider substitution strategy"],
+    thresholdRule: "Alert fires when Q4 max speed drops more than 8% vs Q1-3 average",
+    trendData: {
+      "7d": [6.7, 6.75, 6.8, 6.84, 6.87, 6.89, 5.72],
+      "14d": [6.6, 6.65, 6.7, 6.75, 6.78, 6.82, 6.85, 6.87, 6.88, 6.89, 6.89, 6.89, 6.89, 5.72],
+      "28d": [6.5, 6.55, 6.6, 6.65, 6.7, 6.75, 6.78, 6.82, 6.85, 6.87, 6.88, 6.89, 6.89, 6.89, 6.89, 6.89, 6.89, 6.89, 6.89, 6.89, 6.89, 6.89, 6.89, 6.89, 6.89, 6.89, 6.89, 5.72],
+    },
   },
   {
     id: 6, name: "Kirill Gotovtsev", state: "performance-signal", severity: "Medium",
@@ -197,6 +230,12 @@ const PLAYER_ALERTS: PlayerAlert[] = [
     ],
     explanation: "Kirill's speed dropped substantially in the final quarter, indicating potential conditioning issues during match play.",
     recommendations: ["Review game-day preparation", "Evaluate conditioning baseline", "Monitor trend over next matches"],
+    thresholdRule: "Alert fires when Q4 max speed drops more than 8% vs Q1-3 average",
+    trendData: {
+      "7d": [6.4, 6.45, 6.5, 6.54, 6.56, 6.58, 5.17],
+      "14d": [6.3, 6.35, 6.4, 6.45, 6.5, 6.54, 6.56, 6.58, 6.58, 6.58, 6.58, 6.58, 6.58, 5.17],
+      "28d": [6.2, 6.25, 6.3, 6.35, 6.4, 6.45, 6.5, 6.54, 6.56, 6.58, 6.58, 6.58, 6.58, 6.58, 6.58, 6.58, 6.58, 6.58, 6.58, 6.58, 6.58, 6.58, 6.58, 6.58, 6.58, 6.58, 6.58, 5.17],
+    },
   },
 ];
 
@@ -436,14 +475,9 @@ function PlayerListView({
 }) {
   const stateConfig = ALERT_STATES.find((s) => s.key === stateKey)!;
   const players = PLAYER_ALERTS.filter((a) => a.state === stateKey);
-  const [sortBy, setSortBy] = useState<"severity" | "latest">("severity");
-
   const sorted = [...players].sort((a, b) => {
-    if (sortBy === "severity") {
-      const order = { High: 0, Medium: 1 };
-      return order[a.severity] - order[b.severity];
-    }
-    return 0;
+    const order = { High: 0, Medium: 1 };
+    return order[a.severity] - order[b.severity];
   });
 
   return (
@@ -466,25 +500,7 @@ function PlayerListView({
         </div>
       </div>
 
-      {/* Sort chips */}
-      <div className="shrink-0 flex gap-2 px-4 py-2">
-        {(["severity", "latest"] as const).map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => setSortBy(s)}
-            className={`rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors ${
-              sortBy === s
-                ? "bg-[var(--very-light-green)] text-[var(--light-green)]"
-                : "bg-[var(--very-light-gray)] text-[var(--medium-gray)] hover:bg-[var(--light-gray)]"
-            }`}
-          >
-            {s === "severity" ? "By severity" : "By latest"}
-          </button>
-        ))}
-      </div>
-
-      {/* Player list */}
+      {/* Player list — auto-ranked by severity, no manual sort per spec */}
       <div className="flex-1 overflow-y-auto">
         {sorted.map((player, i) => (
           <button
@@ -521,6 +537,35 @@ function PlayerListView({
         ))}
       </div>
     </div>
+  );
+}
+
+/* ═══════════════════ Trend Chart (SVG) ═══════════════════ */
+
+function TrendChart({ data }: { data: number[] }) {
+  if (data.length < 2) return null;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const padding = { top: 4, right: 4, bottom: 4, left: 4 };
+  const w = 280;
+  const h = 80;
+  const points = data.map((v, i) => {
+    const x = padding.left + (i / (data.length - 1)) * (w - padding.left - padding.right);
+    const y = padding.top + (1 - (v - min) / range) * (h - padding.top - padding.bottom);
+    return `${x},${y}`;
+  }).join(" ");
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="trendGradient" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0%" stopColor="var(--light-green)" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="var(--light-green)" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <polygon fill="url(#trendGradient)" points={`${padding.left},${h - padding.bottom} ${points} ${w - padding.right},${h - padding.bottom}`} />
+      <polyline fill="none" stroke="var(--light-green)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" points={points} />
+    </svg>
   );
 }
 
@@ -593,22 +638,35 @@ function AlertDetailView({
           <p className="mt-2 text-xs text-[var(--text-muted)]">{player.updated}</p>
         </div>
 
-        {/* Metrics grid */}
-        <div className="mx-4 mt-3 grid grid-cols-2 gap-2 animate-fade-up" style={{ animationDelay: "80ms" }}>
-          {player.metrics.map((m) => (
-            <div key={m.label} className="rounded-xl bg-[var(--very-light-gray)] p-4">
-              <p className="text-[10px] uppercase tracking-wider font-medium text-[var(--text-muted)]">{m.label}</p>
-              <p className="mt-1.5 text-2xl font-bold tracking-tight text-[var(--text-primary)]">{m.value}</p>
-            </div>
-          ))}
+        {/* Explainable metrics: 2x2 grid of cards */}
+        <div className="mx-4 mt-3 animate-fade-up" style={{ animationDelay: "80ms" }}>
+          <div className="grid grid-cols-2 gap-2">
+            {player.metrics.map((m) => (
+              <div
+                key={m.label}
+                className="rounded-xl border border-[var(--light-gray)] bg-white px-4 py-3"
+              >
+                <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">{m.label}</p>
+                <p className="mt-1.5 text-xl font-bold tracking-tight text-[var(--text-primary)] tabular-nums">{m.value}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* T4: Trend chart with time window selector */}
+        {/* Threshold rule — always visible per spec */}
+        {player.thresholdRule && (
+          <div className="mx-4 mt-3 rounded-2xl border border-[var(--light-green)] bg-[var(--very-light-green)] p-4 animate-fade-up" style={{ animationDelay: "100ms" }}>
+            <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--brand-primary)] mb-1">Threshold rule</p>
+            <p className="text-sm text-[var(--brand-primary)]">{player.thresholdRule}</p>
+          </div>
+        )}
+
+        {/* Trend chart with time window selector */}
         <div className="mx-4 mt-3 rounded-2xl border border-[var(--light-gray)] bg-white p-4 animate-fade-up" style={{ animationDelay: "160ms" }}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-primary)]">Load trend</p>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">{trendWindow === "7d" ? "7-day" : trendWindow === "14d" ? "14-day" : "28-day"} average vs baseline</p>
+              <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-primary)]">Trend</p>
+              <p className="text-xs text-[var(--text-muted)] mt-0.5">{trendWindow === "7d" ? "7-day" : trendWindow === "14d" ? "14-day" : "28-day"} values</p>
             </div>
             <div className="flex rounded-lg border border-[var(--light-gray)] overflow-hidden">
               {(["7d", "14d", "28d"] as const).map((w) => (
@@ -627,8 +685,14 @@ function AlertDetailView({
               ))}
             </div>
           </div>
-          <div className="mt-3 flex h-24 items-center justify-center rounded-xl bg-[var(--very-light-gray)]">
-            <Activity size={24} className="text-[var(--text-muted)]" />
+          <div className="mt-3 h-24 rounded-xl bg-[var(--very-light-gray)] p-2">
+            {player.trendData?.[trendWindow] ? (
+              <TrendChart data={player.trendData[trendWindow]} />
+            ) : (
+              <div className="flex h-full items-center justify-center">
+                <Activity size={24} className="text-[var(--text-muted)]" />
+              </div>
+            )}
           </div>
         </div>
 
@@ -825,7 +889,13 @@ function AIAlertsView({ onSendToChat }: { onSendToChat: (player: PlayerAlert) =>
           </button>
           <h1 className="text-lg font-bold tracking-tight text-[var(--text-primary)]">Squad</h1>
         </div>
-        <SquadView />
+        <SquadView
+          onSelectPlayer={(squadPlayer) => {
+            const alerts = PLAYER_ALERTS.filter((a) => a.name === squadPlayer.name)
+              .sort((a, b) => (a.severity === "High" ? -1 : 1) - (b.severity === "High" ? -1 : 1));
+            if (alerts.length > 0) setScreen({ view: "detail", player: alerts[0] });
+          }}
+        />
       </div>
     );
   }
@@ -885,12 +955,17 @@ function AIAlertsView({ onSendToChat }: { onSendToChat: (player: PlayerAlert) =>
 
 /* ═══════════════════ T6: Squad View ═══════════════════ */
 
-function SquadView() {
+function SquadView({ onSelectPlayer }: { onSelectPlayer?: (player: SquadPlayer) => void }) {
   const [filterGroup, setFilterGroup] = useState<"All" | "Forward" | "Back" | "Halfback">("All");
+  const [filterPosition, setFilterPosition] = useState<string>("All");
 
-  const filtered = filterGroup === "All"
+  const positions = ["All", ...Array.from(new Set(SQUAD_PLAYERS.map((p) => p.position)))];
+  const filteredByGroup = filterGroup === "All"
     ? SQUAD_PLAYERS
     : SQUAD_PLAYERS.filter((p) => p.group === filterGroup);
+  const filtered = filterPosition === "All"
+    ? filteredByGroup
+    : filteredByGroup.filter((p) => p.position === filterPosition);
 
   function getPlayerAlerts(name: string) {
     return PLAYER_ALERTS.filter((a) => a.name === name);
@@ -913,21 +988,39 @@ function SquadView() {
         <p className="mt-1 text-xs text-[var(--text-muted)]">{PLAYER_ALERTS.length} active alerts</p>
       </div>
 
-      <div className="shrink-0 flex gap-2 px-4 py-2 overflow-x-auto scrollbar-hide">
-        {(["All", "Forward", "Back", "Halfback"] as const).map((g) => (
-          <button
-            key={g}
-            type="button"
-            onClick={() => setFilterGroup(g)}
-            className={`shrink-0 rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors ${
-              filterGroup === g
-                ? "bg-[var(--very-light-green)] text-[var(--light-green)]"
-                : "bg-[var(--very-light-gray)] text-[var(--medium-gray)] hover:bg-[var(--light-gray)]"
-            }`}
-          >
-            {g === "All" ? `All (${SQUAD_PLAYERS.length})` : `${g}s`}
-          </button>
-        ))}
+      <div className="shrink-0 space-y-2 px-4 py-2">
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+          {(["All", "Forward", "Back", "Halfback"] as const).map((g) => (
+            <button
+              key={g}
+              type="button"
+              onClick={() => setFilterGroup(g)}
+              className={`shrink-0 rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors ${
+                filterGroup === g
+                  ? "bg-[var(--very-light-green)] text-[var(--light-green)]"
+                  : "bg-[var(--very-light-gray)] text-[var(--medium-gray)] hover:bg-[var(--light-gray)]"
+              }`}
+            >
+              {g === "All" ? `All (${SQUAD_PLAYERS.length})` : `${g}s`}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+          {positions.map((pos) => (
+            <button
+              key={pos}
+              type="button"
+              onClick={() => setFilterPosition(pos)}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors ${
+                filterPosition === pos
+                  ? "bg-[var(--very-light-green)] text-[var(--light-green)]"
+                  : "bg-[var(--very-light-gray)] text-[var(--medium-gray)] hover:bg-[var(--light-gray)]"
+              }`}
+            >
+              {pos}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -941,9 +1034,11 @@ function SquadView() {
         filtered.map((player, i) => {
           const alerts = getPlayerAlerts(player.name);
           return (
-            <div
+            <button
               key={player.id}
-              className="flex items-center gap-3 border-b border-[var(--light-gray)] px-4 py-3 animate-fade-up"
+              type="button"
+              onClick={() => onSelectPlayer?.(player)}
+              className="flex w-full items-center gap-3 border-b border-[var(--light-gray)] px-4 py-3 text-left transition-colors hover:bg-[var(--very-light-gray)] active:bg-[var(--light-gray)] animate-fade-up"
               style={{ animationDelay: `${i * 40}ms` }}
             >
               <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--very-light-green)] text-sm font-semibold text-[var(--light-green)]">
@@ -975,7 +1070,8 @@ function SquadView() {
                   <span className="text-[11px] text-[var(--text-muted)]">{alerts.length} alert{alerts.length > 1 ? "s" : ""}</span>
                 )}
               </div>
-            </div>
+              {alerts.length > 0 && <ChevronRight size={16} className="shrink-0 text-[var(--text-muted)]" />}
+            </button>
           );
         })
         )}
@@ -1083,7 +1179,7 @@ function ExecutiveSummary() {
       </div>
 
       {/* Actions */}
-      <div className="flex gap-2 px-4 mt-4 mb-6 animate-fade-up" style={{ animationDelay: "400ms" }}>
+      <div className="flex flex-wrap gap-2 px-4 mt-4 mb-6 animate-fade-up" style={{ animationDelay: "400ms" }}>
         <button
           type="button"
           onClick={() => setDismissed(true)}
@@ -1099,6 +1195,23 @@ function ExecutiveSummary() {
         >
           <Share2 size={16} />
           Share
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            const content = `AI Performance Alerts — Executive Summary\n${new Date().toLocaleDateString()}\n\n${summaryText}\n\nTop risks:\n${topRisks.map((a, i) => `${i + 1}. ${a.name} — ${a.shortReason} (${a.severity})`).join("\n")}\n\nCohort trends:\n${ALERT_STATES.map((s) => `${s.label}: ${PLAYER_ALERTS.filter((a) => a.state === s.key).length}`).join("\n")}`;
+            const blob = new Blob([content], { type: "text/plain" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `alerts-summary-${new Date().toISOString().slice(0, 10)}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[var(--light-gray)] bg-white py-3 text-sm font-medium text-[var(--text-primary)] transition-all hover:bg-[var(--very-light-gray)] active:scale-[0.98]"
+        >
+          <Download size={16} />
+          Export
         </button>
       </div>
     </div>
