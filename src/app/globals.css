@@ -1,17 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  /* OpenSport design tokens */
-  --brand-primary: #1e7a35;
-  --very-light-gray: #F8F7F3;
-  --light-gray: #e5e5e5;
-  --medium-gray: #666666;
-  --text-primary: #171717;
-  --text-muted: #999999;
-  --very-light-green: #e5f3e3;
-  --light-green: #2d8a3e;
+  --background: #fafafa;
+  --foreground: #18181b;
+  --brand-primary: #18181b;
+  --very-light-gray: #f4f4f5;
+  --light-gray: #e4e4e7;
+  --medium-gray: #71717a;
+  --text-primary: #18181b;
+  --text-muted: #a1a1aa;
+  --very-light-green: #ecfdf5;
+  --light-green: #34d399;
 }
 
 .scrollbar-hide::-webkit-scrollbar {
@@ -25,11 +24,11 @@
 @keyframes dropdown-in {
   from {
     opacity: 0;
-    transform: translateY(-4px) scale(0.97);
+    transform: translateY(-4px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
   }
 }
 
@@ -69,7 +68,7 @@
 @keyframes slide-in-right {
   from {
     opacity: 0;
-    transform: translateX(12px);
+    transform: translateX(10px);
   }
   to {
     opacity: 1;
@@ -80,10 +79,7 @@
 @keyframes pop-in {
   0% {
     opacity: 0;
-    transform: scale(0.9);
-  }
-  70% {
-    transform: scale(1.02);
+    transform: scale(0.96);
   }
   100% {
     opacity: 1;
@@ -116,18 +112,17 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-open-sans: var(--font-open-sans);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #ffffff;
-    --foreground: #171717;
+    --background: #fafafa;
+    --foreground: #18181b;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-geist-sans), "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
 }

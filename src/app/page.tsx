@@ -76,8 +76,8 @@ function useDragScroll() {
 
 function MenuIcon() {
   return (
-    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#43a047]">
-      <MenuFeather size={20} color="#171717" />
+    <div className="flex h-11 w-11 items-center justify-center">
+      <MenuFeather size={22} color="#0a0a0a" strokeWidth={2.5} />
     </div>
   );
 }
@@ -282,93 +282,156 @@ const DEFAULT_AI_RESPONSE =
 
 /* ═══════════════════ Screen 1 — Alerts Overview ═══════════════════ */
 
-function AlertsOverview({ onSelectState }: { onSelectState: (state: AlertState) => void }) {
+function AlertsOverview({
+  onSelectState,
+  onStartReview,
+  reviewedCount,
+  refreshing,
+  onRefresh,
+  lastUpdated,
+}: {
+  onSelectState: (state: AlertState) => void;
+  onStartReview: () => void;
+  reviewedCount: number;
+  refreshing: boolean;
+  onRefresh: () => void;
+  lastUpdated: string;
+}) {
   const totalPlayers = new Set(PLAYER_ALERTS.map((a) => a.name)).size;
-  const [refreshing, setRefreshing] = useState(false);
-  const serverRefreshTime = "18:30 GMT · 11 Feb";
+  const totalAlerts = PLAYER_ALERTS.length;
+  const firstStateWithAlerts = ALERT_STATES.find((s) => PLAYER_ALERTS.some((a) => a.state === s.key));
 
-  function handleRefresh() {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1200);
-  }
-
-  const statCounts = ALERT_STATES.map((s) => ({
-    ...s,
-    count: PLAYER_ALERTS.filter((a) => a.state === s.key).length,
-  }));
+  const hasAlerts = totalAlerts > 0;
 
   return (
-    <div className="flex-1 overflow-y-auto">
-      <div className="px-4 pt-5 pb-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-[var(--text-primary)]">Performance Overview</h2>
-          <button
-            type="button"
-            aria-label="Refresh alerts"
-            onClick={handleRefresh}
-            className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-          >
-            <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
-            {serverRefreshTime}
-          </button>
+    <div className="relative flex-1 overflow-y-auto">
+      {refreshing && (
+        <div className="absolute inset-0 z-10 flex items-start justify-center bg-white/80 pt-16 animate-fade-in">
+          <div className="flex items-center gap-2 rounded-xl bg-[var(--text-primary)] px-4 py-2.5 text-sm font-medium text-white shadow-lg">
+            <RefreshCw size={16} className="animate-spin" />
+            Refreshing data…
+          </div>
         </div>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">
-          {totalPlayers} players need attention today
-        </p>
+      )}
+      {/* Page title + hero */}
+      <div className="px-4 pt-5">
+        <h1 className="text-lg font-bold tracking-tight text-[var(--text-primary)]">
+          Performance Overview
+        </h1>
       </div>
 
-      {/* State cards */}
-      <div className="flex flex-col gap-3 px-4 pb-4">
-        {ALERT_STATES.map((stateConfig, i) => {
-          const players = [...PLAYER_ALERTS.filter((a) => a.state === stateConfig.key)]
-            .sort((a, b) => (a.severity === "High" ? -1 : 1) - (b.severity === "High" ? -1 : 1));
-          if (players.length === 0) return null;
-          const highCount = players.filter((p) => p.severity === "High").length;
-          const medCount = players.filter((p) => p.severity === "Medium").length;
-          const Icon = stateConfig.icon;
-          const topPlayer = players[0];
-
-          return (
+      {/* Hero metric + refresh */}
+      <div className="px-4 pt-6 pb-4">
+        <div className="flex items-baseline justify-between gap-4">
+          <div className="flex items-baseline gap-3">
+            <p className="text-5xl font-bold tracking-tight text-[var(--text-primary)] tabular-nums">
+              {totalPlayers}
+            </p>
+            <p className="text-sm text-[var(--text-muted)]">
+              need attention
+            </p>
+          </div>
+          <div className="flex flex-col items-end gap-1">
             <button
-              key={stateConfig.key}
               type="button"
-              onClick={() => onSelectState(stateConfig.key)}
-              className="flex items-center gap-3 rounded-2xl border border-[var(--light-gray)] bg-white p-4 text-left transition-all hover:shadow-[0px_4px_20px_0px_rgba(0,0,0,0.06)] active:scale-[0.99] animate-fade-up"
-              style={{ animationDelay: `${i * 80}ms` }}
+              aria-label="Refresh alerts"
+              onClick={onRefresh}
+              disabled={refreshing}
+              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-[var(--text-muted)] hover:bg-[var(--very-light-gray)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-60"
             >
-              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${stateConfig.bgColor}`}>
-                <Icon size={18} className={stateConfig.color} />
-              </div>
+              <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
+              {refreshing ? "Refreshing…" : "Refresh"}
+            </button>
+            <span className="text-[10px] text-[var(--text-muted)]">{lastUpdated}</span>
+          </div>
+        </div>
+      </div>
+
+      {!hasAlerts ? (
+        /* Empty state */
+        <div className="mx-4 mt-4 flex flex-col items-center justify-center rounded-2xl border border-[var(--light-gray)] bg-[var(--very-light-gray)] py-16 px-6 text-center animate-fade-up">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white">
+            <CheckCircle size={28} className="text-[var(--light-green)]" />
+          </div>
+          <p className="mt-4 text-lg font-semibold text-[var(--text-primary)]">No alerts today</p>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">
+            All players are within normal ranges. Check back after the next session.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* State cards */}
+          <div className="flex flex-col gap-3 px-4">
+            {ALERT_STATES.map((stateConfig, i) => {
+              const players = [...PLAYER_ALERTS.filter((a) => a.state === stateConfig.key)]
+                .sort((a, b) => (a.severity === "High" ? -1 : 1) - (b.severity === "High" ? -1 : 1));
+              if (players.length === 0) return null;
+              const highCount = players.filter((p) => p.severity === "High").length;
+              const medCount = players.filter((p) => p.severity === "Medium").length;
+              const severityLabel = [highCount > 0 && `${highCount} high`, medCount > 0 && `${medCount} med`]
+                .filter(Boolean)
+                .join(", ");
+              const Icon = stateConfig.icon;
+
+              return (
+                <button
+                  key={stateConfig.key}
+                  type="button"
+                  onClick={() => onSelectState(stateConfig.key)}
+                  className="flex items-center gap-3 rounded-2xl border border-[var(--light-gray)] bg-white p-4 text-left transition-all hover:shadow-[0px_4px_20px_0px_rgba(0,0,0,0.06)] active:scale-[0.99] animate-fade-up"
+                  style={{ animationDelay: `${i * 80}ms` }}
+                >
+                  <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${stateConfig.bgColor}`}>
+                    <Icon size={20} className={stateConfig.color} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-base font-semibold text-[var(--text-primary)]">{stateConfig.label}</span>
+                    <p className="mt-0.5 text-[13px] text-[var(--text-muted)]">
+                      {players.length} {players.length === 1 ? "player" : "players"}
+                      {severityLabel && (
+                        <span className="text-[var(--medium-gray)]"> · {severityLabel}</span>
+                      )}
+                    </p>
+                  </div>
+                  <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--light-green)] shrink-0">
+                    Review
+                  </span>
+                  <ChevronRight size={18} className="shrink-0 text-[var(--text-muted)]" />
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Today's summary — progress + CTA */}
+          <div className="mx-4 mt-4 mb-4 rounded-2xl border border-[var(--light-gray)] bg-[var(--very-light-gray)] p-4 animate-fade-up" style={{ animationDelay: "300ms" }}>
+            <p className="text-[10px] uppercase tracking-wider font-medium text-[var(--text-muted)] mb-3">
+              Today&apos;s progress
+            </p>
+            <div className="flex items-center justify-between gap-4">
               <div className="flex-1 min-w-0">
-                <span className="text-base font-semibold text-[var(--text-primary)]">{stateConfig.label}</span>
-                <p className="mt-0.5 text-sm text-[var(--text-muted)]">
-                  {players.length} {players.length === 1 ? "player" : "players"} · {[highCount > 0 && `${highCount} high`, medCount > 0 && `${medCount} medium`].filter(Boolean).join(", ")}
+                <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--light-gray)]">
+                  <div
+                    className="h-full rounded-full bg-[var(--light-green)] transition-all duration-300"
+                    style={{ width: `${totalAlerts > 0 ? (reviewedCount / totalAlerts) * 100 : 0}%` }}
+                  />
+                </div>
+                <p className="mt-1.5 text-sm font-medium text-[var(--text-primary)]">
+                  {reviewedCount} of {totalAlerts} reviewed
                 </p>
               </div>
-              <ChevronRight size={18} className="shrink-0 text-[var(--text-muted)]" />
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Daily summary */}
-      <div className="mx-4 mb-4 rounded-2xl border border-[var(--light-gray)] bg-[var(--very-light-gray)] p-4 animate-fade-up" style={{ animationDelay: "300ms" }}>
-        <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">Today&apos;s summary</p>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-[#dc2626]" />
-            <span className="text-sm text-[var(--medium-gray)]">{PLAYER_ALERTS.length} new</span>
+              {firstStateWithAlerts && (
+                <button
+                  type="button"
+                  onClick={onStartReview}
+                  className="shrink-0 rounded-xl bg-[var(--light-green)] px-4 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98]"
+                >
+                  Start review
+                </button>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-[#d97706]" />
-            <span className="text-sm text-[var(--medium-gray)]">{PLAYER_ALERTS.length} unresolved</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-[#43a047]" />
-            <span className="text-sm text-[var(--medium-gray)]">0 reviewed</span>
-          </div>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }
@@ -399,16 +462,20 @@ function PlayerListView({
   return (
     <div className="flex flex-1 flex-col min-h-0">
       {/* Header */}
-      <div className="shrink-0 flex items-center gap-3 px-4 pt-4 pb-2">
-        <button type="button" aria-label="Go back" onClick={onBack} className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
-          <ArrowLeft size={20} />
-        </button>
-        <div>
-          <div className="flex items-center gap-2">
-            <span className={`h-2 w-2 rounded-full ${stateConfig.dotColor}`} />
-            <h2 className="text-lg font-bold text-[var(--text-primary)]">{stateConfig.label}</h2>
-          </div>
-          <p className="text-sm text-[var(--text-muted)]">{players.length} {players.length === 1 ? "player needs" : "players need"} review</p>
+      <div className="shrink-0 border-b border-[var(--light-gray)] bg-white px-4 pt-4 pb-4">
+        <div className="flex items-center gap-3">
+          <button type="button" aria-label="Go back" onClick={onBack} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
+            <ArrowLeft size={20} />
+          </button>
+          <h1 className="text-lg font-bold tracking-tight text-[var(--text-primary)]">
+            {stateConfig.label}
+          </h1>
+        </div>
+        <div className="mt-3 flex items-baseline gap-3 pl-[52px]">
+          <p className="text-5xl font-bold tracking-tight text-[var(--text-primary)] tabular-nums">{players.length}</p>
+          <p className="text-sm text-[var(--text-muted)]">
+            {players.length === 1 ? "needs review" : "need review"}
+          </p>
         </div>
       </div>
 
@@ -476,10 +543,12 @@ function AlertDetailView({
   player,
   onBack,
   onSendToChat,
+  onReview,
 }: {
   player: PlayerAlert;
   onBack: () => void;
   onSendToChat: (player: PlayerAlert) => void;
+  onReview?: (playerId: number) => void;
 }) {
   const stateConfig = ALERT_STATES.find((s) => s.key === player.state)!;
   const [actionTaken, setActionTaken] = useState<string | null>(null);
@@ -487,10 +556,15 @@ function AlertDetailView({
   const [trendWindow, setTrendWindow] = useState<"7d" | "14d" | "28d">("7d");
   const [overrideConfirmed, setOverrideConfirmed] = useState(false);
 
+  function markReviewed() {
+    onReview?.(player.id);
+  }
+
   function handleOverride() {
     if (actionTaken === "override" && !overrideConfirmed) {
       if (!noteText.trim()) return;
       setOverrideConfirmed(true);
+      markReviewed();
       return;
     }
     setActionTaken("override");
@@ -499,15 +573,17 @@ function AlertDetailView({
   return (
     <div className="flex flex-1 flex-col min-h-0">
       {/* Header */}
-      <div className="shrink-0 flex items-center gap-3 px-4 pt-4 pb-3 border-b border-[var(--light-gray)]">
-        <button type="button" aria-label="Go back" onClick={onBack} className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
-          <ArrowLeft size={20} />
-        </button>
-        <div>
-          <h2 className="text-lg font-bold text-[var(--text-primary)]">{player.name}</h2>
-          <div className="flex items-center gap-1.5">
-            <span className={`h-1.5 w-1.5 rounded-full ${stateConfig.dotColor}`} />
-            <span className="text-sm text-[var(--text-muted)]">{stateConfig.label}</span>
+      <div className="shrink-0 border-b border-[var(--light-gray)] bg-white px-4 pt-4 pb-3">
+        <div className="flex items-center gap-3">
+          <button type="button" aria-label="Go back" onClick={onBack} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
+            <ArrowLeft size={20} />
+          </button>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg font-bold tracking-tight text-[var(--text-primary)] truncate">{player.name}</h1>
+            <div className="mt-0.5 flex items-center gap-1.5">
+              <span className={`h-1.5 w-1.5 rounded-full ${stateConfig.dotColor}`} />
+              <span className="text-sm text-[var(--text-muted)]">{stateConfig.label}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -533,9 +609,9 @@ function AlertDetailView({
         {/* Metrics grid */}
         <div className="mx-4 mt-3 grid grid-cols-2 gap-2 animate-fade-up" style={{ animationDelay: "80ms" }}>
           {player.metrics.map((m) => (
-            <div key={m.label} className="rounded-xl border border-[var(--light-gray)] bg-white p-3">
-              <p className="text-xs text-[var(--text-muted)]">{m.label}</p>
-              <p className="mt-1 text-lg font-bold text-[var(--text-primary)]">{m.value}</p>
+            <div key={m.label} className="rounded-xl bg-[var(--very-light-gray)] p-4">
+              <p className="text-[10px] uppercase tracking-wider font-medium text-[var(--text-muted)]">{m.label}</p>
+              <p className="mt-1.5 text-2xl font-bold tracking-tight text-[var(--text-primary)]">{m.value}</p>
             </div>
           ))}
         </div>
@@ -544,7 +620,7 @@ function AlertDetailView({
         <div className="mx-4 mt-3 rounded-2xl border border-[var(--light-gray)] bg-white p-4 animate-fade-up" style={{ animationDelay: "160ms" }}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-[var(--text-primary)]">Load trend</p>
+              <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-primary)]">Load trend</p>
               <p className="text-xs text-[var(--text-muted)] mt-0.5">{trendWindow === "7d" ? "7-day" : trendWindow === "14d" ? "14-day" : "28-day"} average vs baseline</p>
             </div>
             <div className="flex rounded-lg border border-[var(--light-gray)] overflow-hidden">
@@ -571,13 +647,13 @@ function AlertDetailView({
 
         {/* Explanation */}
         <div className="mx-4 mt-3 rounded-2xl border border-[var(--light-gray)] bg-white p-4 animate-fade-up" style={{ animationDelay: "240ms" }}>
-          <p className="text-sm font-semibold text-[var(--text-primary)]">Why this alert appeared</p>
+          <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-primary)]">Why this alert appeared</p>
           <p className="mt-2 text-sm leading-5 text-[var(--medium-gray)]">{player.explanation}</p>
         </div>
 
         {/* Recommended actions */}
         <div className="mx-4 mt-3 rounded-2xl border border-[var(--light-green)] bg-[var(--very-light-green)] p-4 animate-fade-up" style={{ animationDelay: "320ms" }}>
-          <p className="text-sm font-semibold text-[var(--brand-primary)]">Suggested next steps</p>
+          <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--brand-primary)]">Suggested next steps</p>
           <ul className="mt-2 flex flex-col gap-1.5">
             {player.recommendations.map((r) => (
               <li key={r} className="flex items-start gap-2 text-sm text-[var(--brand-primary)]">
@@ -593,7 +669,7 @@ function AlertDetailView({
           <button
             type="button"
             onClick={() => onSendToChat(player)}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[var(--light-gray)] bg-white py-3 text-sm font-medium text-[#2d8a3e] transition-all hover:bg-[var(--very-light-green)] active:scale-[0.98]"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[var(--light-gray)] bg-white py-3 text-sm font-medium text-[var(--light-green)] transition-all hover:bg-[var(--very-light-green)] active:scale-[0.98]"
           >
             <Zap size={16} />
             Discuss with AI Chat
@@ -602,10 +678,10 @@ function AlertDetailView({
 
         {/* Decision actions */}
         <div className="mx-4 mt-4 flex flex-col gap-2 animate-fade-up" style={{ animationDelay: "400ms" }}>
-          <p className="text-sm font-semibold text-[var(--text-primary)] mb-1">Take action</p>
+          <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-primary)] mb-2">Take action</p>
           <button
             type="button"
-            onClick={() => setActionTaken("review")}
+            onClick={() => { setActionTaken("review"); markReviewed(); }}
             className={`flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition-all active:scale-[0.98] ${
               actionTaken === "review"
                 ? "bg-[var(--light-green)] text-white"
@@ -617,7 +693,7 @@ function AlertDetailView({
           </button>
           <button
             type="button"
-            onClick={() => setActionTaken("monitor")}
+            onClick={() => { setActionTaken("monitor"); markReviewed(); }}
             className={`flex items-center justify-center gap-2 rounded-xl border py-3 text-sm font-semibold transition-all active:scale-[0.98] ${
               actionTaken === "monitor"
                 ? "border-[var(--light-green)] bg-[var(--very-light-green)] text-[var(--light-green)]"
@@ -630,7 +706,7 @@ function AlertDetailView({
           {/* T3: Assign follow-up */}
           <button
             type="button"
-            onClick={() => setActionTaken("assign")}
+            onClick={() => { setActionTaken("assign"); markReviewed(); }}
             className={`flex items-center justify-center gap-2 rounded-xl border py-3 text-sm font-semibold transition-all active:scale-[0.98] ${
               actionTaken === "assign"
                 ? "border-[var(--light-green)] bg-[var(--very-light-green)] text-[var(--light-green)]"
@@ -643,7 +719,7 @@ function AlertDetailView({
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => setActionTaken("expected")}
+              onClick={() => { setActionTaken("expected"); markReviewed(); }}
               className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl border py-2.5 text-sm font-medium transition-all active:scale-[0.98] ${
                 actionTaken === "expected"
                   ? "border-[var(--light-green)] bg-[var(--very-light-green)] text-[var(--light-green)]"
@@ -674,7 +750,7 @@ function AlertDetailView({
         {/* T5: Note section with override requirement */}
         <div className="mx-4 mt-4 mb-6 animate-fade-up" style={{ animationDelay: "480ms" }}>
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-semibold text-[var(--text-primary)]">Add note</p>
+            <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-primary)]">Add note</p>
             {actionTaken === "override" && !overrideConfirmed && (
               <span className="text-xs font-medium text-[#dc2626]">Required for override</span>
             )}
@@ -717,6 +793,25 @@ type AlertsScreen =
 
 function AIAlertsView({ onSendToChat }: { onSendToChat: (player: PlayerAlert) => void }) {
   const [screen, setScreen] = useState<AlertsScreen>({ view: "overview" });
+  const [reviewedAlertIds, setReviewedAlertIds] = useState<Set<number>>(new Set());
+  const [refreshing, setRefreshing] = useState(false);
+  const lastUpdated = "18:30 GMT · 11 Feb";
+
+  const reviewedCount = reviewedAlertIds.size;
+  const firstStateWithAlerts = ALERT_STATES.find((s) => PLAYER_ALERTS.some((a) => a.state === s.key));
+
+  function handleRefresh() {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 1200);
+  }
+
+  function handleStartReview() {
+    if (firstStateWithAlerts) setScreen({ view: "player-list", state: firstStateWithAlerts.key });
+  }
+
+  function handleReview(playerId: number) {
+    setReviewedAlertIds((prev) => new Set(prev).add(playerId));
+  }
 
   if (screen.view === "detail") {
     return (
@@ -724,6 +819,7 @@ function AIAlertsView({ onSendToChat }: { onSendToChat: (player: PlayerAlert) =>
         player={screen.player}
         onBack={() => setScreen({ view: "player-list", state: screen.player.state })}
         onSendToChat={onSendToChat}
+        onReview={handleReview}
       />
     );
   }
@@ -741,10 +837,11 @@ function AIAlertsView({ onSendToChat }: { onSendToChat: (player: PlayerAlert) =>
   if (screen.view === "squad") {
     return (
       <div className="flex flex-1 flex-col min-h-0">
-        <div className="shrink-0 flex items-center gap-3 px-4 pt-4 pb-2">
-          <button type="button" aria-label="Go back" onClick={() => setScreen({ view: "overview" })} className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
+        <div className="shrink-0 flex items-center gap-3 border-b border-[var(--light-gray)] bg-white px-4 pt-4 pb-3">
+          <button type="button" aria-label="Go back" onClick={() => setScreen({ view: "overview" })} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
             <ArrowLeft size={20} />
           </button>
+          <h1 className="text-lg font-bold tracking-tight text-[var(--text-primary)]">Squad</h1>
         </div>
         <SquadView />
       </div>
@@ -754,10 +851,11 @@ function AIAlertsView({ onSendToChat }: { onSendToChat: (player: PlayerAlert) =>
   if (screen.view === "summary") {
     return (
       <div className="flex flex-1 flex-col min-h-0">
-        <div className="shrink-0 flex items-center gap-3 px-4 pt-4 pb-2">
-          <button type="button" aria-label="Go back" onClick={() => setScreen({ view: "overview" })} className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
+        <div className="shrink-0 flex items-center gap-3 border-b border-[var(--light-gray)] bg-white px-4 pt-4 pb-3">
+          <button type="button" aria-label="Go back" onClick={() => setScreen({ view: "overview" })} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
             <ArrowLeft size={20} />
           </button>
+          <h1 className="text-lg font-bold tracking-tight text-[var(--text-primary)]">Executive Summary</h1>
         </div>
         <ExecutiveSummary />
       </div>
@@ -767,10 +865,11 @@ function AIAlertsView({ onSendToChat }: { onSendToChat: (player: PlayerAlert) =>
   if (screen.view === "settings") {
     return (
       <div className="flex flex-1 flex-col min-h-0">
-        <div className="shrink-0 flex items-center gap-3 px-4 pt-4 pb-2">
-          <button type="button" aria-label="Go back" onClick={() => setScreen({ view: "overview" })} className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
+        <div className="shrink-0 flex items-center gap-3 border-b border-[var(--light-gray)] bg-white px-4 pt-4 pb-3">
+          <button type="button" aria-label="Go back" onClick={() => setScreen({ view: "overview" })} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
             <ArrowLeft size={20} />
           </button>
+          <h1 className="text-lg font-bold tracking-tight text-[var(--text-primary)]">AI Settings</h1>
         </div>
         <SettingsView />
       </div>
@@ -779,20 +878,24 @@ function AIAlertsView({ onSendToChat }: { onSendToChat: (player: PlayerAlert) =>
 
   return (
     <div className="flex flex-1 flex-col min-h-0">
-      <AlertsOverview onSelectState={(state) => setScreen({ view: "player-list", state })} />
-      {/* Quick access bar for new screens */}
-      <div className="shrink-0 flex items-center justify-around border-t border-[var(--light-gray)] bg-white py-2 px-4">
-        <button type="button" onClick={() => setScreen({ view: "squad" })} className="flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
+      <AlertsOverview
+        onSelectState={(state) => setScreen({ view: "player-list", state })}
+        onStartReview={handleStartReview}
+        reviewedCount={reviewedCount}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
+        lastUpdated={lastUpdated}
+      />
+      {/* Quick access — compact icons */}
+      <div className="shrink-0 flex items-center justify-center gap-8 border-t border-[var(--light-gray)] bg-[var(--very-light-gray)] py-2.5 px-4">
+        <button type="button" onClick={() => setScreen({ view: "squad" })} className="flex h-10 w-10 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-white hover:text-[var(--text-primary)] transition-colors" aria-label="Squad">
           <Users size={20} />
-          <span className="text-[11px] font-medium">Squad</span>
         </button>
-        <button type="button" onClick={() => setScreen({ view: "summary" })} className="flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
+        <button type="button" onClick={() => setScreen({ view: "summary" })} className="flex h-10 w-10 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-white hover:text-[var(--text-primary)] transition-colors" aria-label="Summary">
           <Zap size={20} />
-          <span className="text-[11px] font-medium">Summary</span>
         </button>
-        <button type="button" onClick={() => setScreen({ view: "settings" })} className="flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
+        <button type="button" onClick={() => setScreen({ view: "settings" })} className="flex h-10 w-10 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-white hover:text-[var(--text-primary)] transition-colors" aria-label="Settings">
           <Settings size={20} />
-          <span className="text-[11px] font-medium">Settings</span>
         </button>
       </div>
     </div>
@@ -816,14 +919,17 @@ function SquadView() {
     const alerts = getPlayerAlerts(name);
     if (alerts.some((a) => a.severity === "High")) return "bg-[#dc2626]";
     if (alerts.length > 0) return "bg-[#d97706]";
-    return "bg-[#43a047]";
+    return "bg-[#22c55e]";
   }
 
   return (
     <div className="flex flex-1 flex-col min-h-0">
-      <div className="shrink-0 px-4 pt-5 pb-2">
-        <h2 className="text-xl font-bold text-[var(--text-primary)]">Squad overview</h2>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">{SQUAD_PLAYERS.length} athletes · {PLAYER_ALERTS.length} active alerts</p>
+      <div className="shrink-0 px-4 pt-4 pb-4">
+        <div className="flex items-baseline gap-3">
+          <p className="text-5xl font-bold tracking-tight text-[var(--text-primary)] tabular-nums">{SQUAD_PLAYERS.length}</p>
+          <p className="text-sm text-[var(--text-muted)]">athletes</p>
+        </div>
+        <p className="mt-1 text-xs text-[var(--text-muted)]">{PLAYER_ALERTS.length} active alerts</p>
       </div>
 
       <div className="shrink-0 flex gap-2 px-4 py-2 overflow-x-auto scrollbar-hide">
@@ -844,7 +950,14 @@ function SquadView() {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {filtered.map((player, i) => {
+        {filtered.length === 0 ? (
+          <div className="mx-4 mt-4 flex flex-col items-center justify-center rounded-2xl border border-[var(--light-gray)] bg-[var(--very-light-gray)] py-12 px-6 text-center">
+            <Users size={32} className="text-[var(--text-muted)]" />
+            <p className="mt-3 text-sm font-medium text-[var(--text-primary)]">No players in this group</p>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">Try selecting a different filter</p>
+          </div>
+        ) : (
+        filtered.map((player, i) => {
           const alerts = getPlayerAlerts(player.name);
           return (
             <div
@@ -864,7 +977,7 @@ function SquadView() {
 
               <div className="flex flex-col items-end gap-1 shrink-0">
                 <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                  player.availability === "Available" ? "bg-[#f0fdf4] text-[#2d8a3e]"
+                  player.availability === "Available" ? "bg-[var(--very-light-green)] text-[var(--light-green)]"
                     : player.availability === "Limited" ? "bg-[#fffbeb] text-[#d97706]"
                     : "bg-[#fef2f2] text-[#dc2626]"
                 }`}>
@@ -883,7 +996,8 @@ function SquadView() {
               </div>
             </div>
           );
-        })}
+        })
+        )}
       </div>
     </div>
   );
@@ -911,14 +1025,17 @@ function ExecutiveSummary() {
     );
   }
 
+  const alertCount = PLAYER_ALERTS.length;
+  const athleteCount = new Set(PLAYER_ALERTS.map((a) => a.name)).size;
+
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="px-4 pt-5 pb-3">
-        <div className="flex items-center gap-2">
-          <Zap size={18} className="text-[var(--light-green)]" />
-          <h2 className="text-xl font-bold text-[var(--text-primary)]">Executive summary</h2>
+      <div className="px-4 pt-4 pb-4">
+        <div className="flex items-baseline gap-3">
+          <p className="text-5xl font-bold tracking-tight text-[var(--text-primary)] tabular-nums">{alertCount}</p>
+          <p className="text-sm text-[var(--text-muted)]">alerts today</p>
         </div>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">AI-generated briefing · Today</p>
+        <p className="mt-1 text-xs text-[var(--text-muted)]">Across {athleteCount} athletes</p>
       </div>
 
       {/* AI Summary */}
@@ -928,7 +1045,7 @@ function ExecutiveSummary() {
 
       {/* Top 3 risks */}
       <div className="px-4 mt-4 animate-fade-up" style={{ animationDelay: "100ms" }}>
-        <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">Top risks</p>
+        <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-primary)] mb-2">Top risks</p>
         <div className="flex flex-col gap-2">
           {topRisks.map((alert, i) => (
             <div key={alert.id} className="flex items-center gap-3 rounded-xl border border-[var(--light-gray)] bg-white p-3">
@@ -951,14 +1068,14 @@ function ExecutiveSummary() {
 
       {/* Cohort trends */}
       <div className="px-4 mt-4 animate-fade-up" style={{ animationDelay: "200ms" }}>
-        <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">Cohort trends</p>
+        <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-primary)] mb-2">Cohort trends</p>
         <div className="grid grid-cols-3 gap-2">
           {ALERT_STATES.map((s) => {
             const count = PLAYER_ALERTS.filter((a) => a.state === s.key).length;
             return (
-              <div key={s.key} className={`rounded-xl ${s.bgColor} p-3 text-center`}>
-                <p className="text-lg font-bold text-[var(--text-primary)]">{count}</p>
-                <p className="text-[11px] font-medium text-[var(--text-muted)]">{s.label}</p>
+              <div key={s.key} className={`rounded-xl ${s.bgColor} p-4 text-center`}>
+                <p className="text-4xl font-bold tracking-tight text-[var(--text-primary)] tabular-nums">{count}</p>
+                <p className="text-[10px] uppercase tracking-wider font-medium text-[var(--text-muted)] mt-1">{s.label}</p>
               </div>
             );
           })}
@@ -967,7 +1084,7 @@ function ExecutiveSummary() {
 
       {/* Suggested focus */}
       <div className="mx-4 mt-4 rounded-2xl border border-[var(--light-gray)] bg-white p-4 animate-fade-up" style={{ animationDelay: "300ms" }}>
-        <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">Suggested focus areas</p>
+        <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-primary)] mb-2">Suggested focus areas</p>
         <ul className="flex flex-col gap-2">
           <li className="flex items-start gap-2 text-sm text-[var(--medium-gray)]">
             <AlertTriangle size={16} className="shrink-0 mt-0.5 text-[#dc2626]" />
@@ -1029,21 +1146,23 @@ function SettingsView() {
     { action: "Recovery module enabled", by: "Admin", time: "Mar 10, 09:00" },
   ];
 
+  const enabledCount = modules.filter((m) => m.enabled).length;
+
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="px-4 pt-5 pb-3">
-        <div className="flex items-center gap-2">
-          <Settings size={18} className="text-[var(--text-primary)]" />
-          <h2 className="text-xl font-bold text-[var(--text-primary)]">AI settings</h2>
+      <div className="px-4 pt-4 pb-4">
+        <div className="flex items-baseline gap-3">
+          <p className="text-5xl font-bold tracking-tight text-[var(--text-primary)] tabular-nums">{enabledCount}</p>
+          <p className="text-sm text-[var(--text-muted)]">modules active</p>
         </div>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">Govern AI modules and sensitivity</p>
+        <p className="mt-1 text-xs text-[var(--text-muted)]">of {modules.length} total</p>
       </div>
 
       {/* Sensitivity selector */}
       <div className="mx-4 rounded-2xl border border-[var(--light-gray)] bg-white p-4 animate-fade-up">
         <div className="flex items-center gap-2 mb-3">
           <Sliders size={16} className="text-[var(--text-primary)]" />
-          <p className="text-sm font-semibold text-[var(--text-primary)]">Detection sensitivity</p>
+          <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-primary)]">Detection sensitivity</p>
         </div>
         <div className="flex rounded-xl border border-[var(--light-gray)] overflow-hidden">
           {(["Conservative", "Balanced", "Aggressive"] as SensitivityMode[]).map((mode) => (
@@ -1072,7 +1191,7 @@ function SettingsView() {
       <div className="px-4 mt-4 animate-fade-up" style={{ animationDelay: "100ms" }}>
         <div className="flex items-center gap-2 mb-3">
           <Shield size={16} className="text-[var(--text-primary)]" />
-          <p className="text-sm font-semibold text-[var(--text-primary)]">AI modules</p>
+          <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-primary)]">AI modules</p>
         </div>
         <div className="flex flex-col gap-2">
           {modules.map((mod) => (
@@ -1094,23 +1213,23 @@ function SettingsView() {
 
       {/* Threshold info */}
       <div className="mx-4 mt-4 rounded-2xl border border-[var(--light-gray)] bg-[var(--very-light-gray)] p-4 animate-fade-up" style={{ animationDelay: "200ms" }}>
-        <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">Active thresholds</p>
+        <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-primary)] mb-2">Active thresholds</p>
         <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-lg bg-white p-2.5">
-            <p className="text-xs text-[var(--text-muted)]">AC ratio limit</p>
-            <p className="text-sm font-bold text-[var(--text-primary)]">1.20</p>
+          <div className="rounded-lg bg-white p-3">
+            <p className="text-[10px] uppercase tracking-wider font-medium text-[var(--text-muted)]">AC ratio limit</p>
+            <p className="text-xl font-bold tracking-tight text-[var(--text-primary)] mt-0.5">1.20</p>
           </div>
-          <div className="rounded-lg bg-white p-2.5">
-            <p className="text-xs text-[var(--text-muted)]">Load deviation</p>
-            <p className="text-sm font-bold text-[var(--text-primary)]">±20%</p>
+          <div className="rounded-lg bg-white p-3">
+            <p className="text-[10px] uppercase tracking-wider font-medium text-[var(--text-muted)]">Load deviation</p>
+            <p className="text-xl font-bold tracking-tight text-[var(--text-primary)] mt-0.5">±20%</p>
           </div>
-          <div className="rounded-lg bg-white p-2.5">
-            <p className="text-xs text-[var(--text-muted)]">Speed drop</p>
-            <p className="text-sm font-bold text-[var(--text-primary)]">-8%</p>
+          <div className="rounded-lg bg-white p-3">
+            <p className="text-[10px] uppercase tracking-wider font-medium text-[var(--text-muted)]">Speed drop</p>
+            <p className="text-xl font-bold tracking-tight text-[var(--text-primary)] mt-0.5">-8%</p>
           </div>
-          <div className="rounded-lg bg-white p-2.5">
-            <p className="text-xs text-[var(--text-muted)]">Total rules</p>
-            <p className="text-sm font-bold text-[var(--text-primary)]">{ALERT_STATES.reduce((a, s) => a + s.rules.length, 0)}</p>
+          <div className="rounded-lg bg-white p-3">
+            <p className="text-[10px] uppercase tracking-wider font-medium text-[var(--text-muted)]">Total rules</p>
+            <p className="text-xl font-bold tracking-tight text-[var(--text-primary)] mt-0.5">{ALERT_STATES.reduce((a, s) => a + s.rules.length, 0)}</p>
           </div>
         </div>
       </div>
@@ -1119,7 +1238,7 @@ function SettingsView() {
       <div className="px-4 mt-4 mb-6 animate-fade-up" style={{ animationDelay: "300ms" }}>
         <div className="flex items-center gap-2 mb-3">
           <Clock size={16} className="text-[var(--text-primary)]" />
-          <p className="text-sm font-semibold text-[var(--text-primary)]">Configuration history</p>
+          <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-primary)]">Configuration history</p>
         </div>
         <div className="flex flex-col gap-2">
           {configHistory.map((item, i) => (
@@ -1213,7 +1332,7 @@ function ChatHistoryPanel({
   return (
     <div className="absolute inset-0 z-30 flex flex-col bg-white animate-in">
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--light-gray)] px-4">
-        <h2 className="text-base font-semibold text-[var(--text-primary)]">Chat history</h2>
+        <h2 className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-primary)]">Chat history</h2>
         <button type="button" aria-label="Close history" onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)]">
           <X size={16} />
         </button>
@@ -1352,13 +1471,23 @@ function AIChatView({
 
       {/* Messages area */}
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {messages.length > 0 && (
+        {messages.length > 0 ? (
           <div className="flex flex-col gap-1 py-3">
             {messages.map((msg) => (
               <ChatBubble key={msg.id} msg={msg} />
             ))}
             {isTyping && <TypingIndicator />}
             <div ref={messagesEndRef} />
+          </div>
+        ) : (
+          <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--very-light-green)]">
+              <Zap size={28} className="text-[var(--light-green)]" />
+            </div>
+            <p className="mt-4 text-lg font-semibold text-[var(--text-primary)]">AI Chat</p>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">
+              Ask about players, metrics, and performance. Try a suggestion below or type your own question.
+            </p>
           </div>
         )}
       </div>
@@ -1390,7 +1519,7 @@ function AIChatView({
             ))}
           </div>
         )}
-        <div className="flex flex-col gap-2 rounded-2xl border-2 border-[var(--light-green)] bg-white p-2.5 shadow-[0px_0px_15px_0px_rgba(0,0,0,0.06)]">
+        <div className="flex flex-col gap-2 rounded-2xl border border-[var(--light-green)] bg-white p-2.5 shadow-[0px_0px_15px_0px_rgba(0,0,0,0.06)]">
           <div className="px-1.5">
             <textarea
               ref={textareaRef}
@@ -1431,7 +1560,7 @@ function AIChatView({
               onClick={handleSubmit}
               disabled={!hasText}
               className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors ${
-                hasText ? "bg-[var(--light-green)] active:scale-95" : "bg-[#c5c9c3]"
+                hasText ? "bg-[var(--light-green)] active:scale-95" : "bg-[var(--text-muted)]"
               }`}
             >
               <ArrowUp size={16} color="white" />
@@ -1504,7 +1633,7 @@ export default function InsightsPage() {
           <MenuIcon />
         </button>
         <div className="flex items-center gap-2 py-[3px]">
-          <span className="text-base font-semibold text-[var(--brand-primary)] whitespace-nowrap" style={{ fontFamily: "var(--font-open-sans)" }}>
+          <span className="text-base font-semibold tracking-tight text-[var(--text-primary)] whitespace-nowrap">
             Gloucester Rugby
           </span>
           <span className="flex text-[var(--brand-primary)]">
@@ -1524,11 +1653,11 @@ export default function InsightsPage() {
               className="flex h-full flex-col items-center gap-[10px]"
             >
               <div className="flex flex-1 items-center justify-center">
-                <span className={`text-base font-semibold leading-5 ${activeTab === "alerts" ? "text-[var(--brand-primary)]" : "text-[var(--medium-gray)]"}`}>
+                <span className={`text-[13px] font-semibold leading-5 uppercase tracking-wider ${activeTab === "alerts" ? "text-[var(--brand-primary)]" : "text-[var(--medium-gray)]"}`}>
                   AI alerts
                 </span>
               </div>
-              <div className={`h-[2px] w-full ${activeTab === "alerts" ? "bg-[#43a047]" : "bg-transparent"}`} />
+              <div className={`h-[3px] w-full ${activeTab === "alerts" ? "bg-[var(--light-green)]" : "bg-transparent"}`} />
             </button>
             <button
               type="button"
@@ -1536,11 +1665,11 @@ export default function InsightsPage() {
               className="flex h-full flex-col items-center gap-[10px]"
             >
               <div className="flex flex-1 items-center justify-center">
-                <span className={`text-base font-semibold leading-5 ${activeTab === "chat" ? "text-[var(--brand-primary)]" : "text-[var(--medium-gray)]"}`}>
+                <span className={`text-[13px] font-semibold leading-5 uppercase tracking-wider ${activeTab === "chat" ? "text-[var(--brand-primary)]" : "text-[var(--medium-gray)]"}`}>
                   AI chat
                 </span>
               </div>
-              <div className={`h-[2px] w-full ${activeTab === "chat" ? "bg-[#43a047]" : "bg-transparent"}`} />
+              <div className={`h-[3px] w-full ${activeTab === "chat" ? "bg-[var(--light-green)]" : "bg-transparent"}`} />
             </button>
           </div>
 

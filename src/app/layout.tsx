@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Open_Sans } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,15 +12,9 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const openSans = Open_Sans({
-  variable: "--font-open-sans",
-  subsets: ["latin"],
-  weight: ["600"],
-});
-
 export const metadata: Metadata = {
-  title: "PlayWize AI – Insights",
-  description: "AI alerts and insights for PlayWize",
+  title: "AI Alerts & Chat – PlayWize",
+  description: "Performance alerts and AI-powered insights for your squad",
 };
 
 export const viewport = {
@@ -38,7 +32,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${openSans.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
       </body>
