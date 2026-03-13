@@ -3,15 +3,15 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  /* PlayWize design tokens */
-  --brand-primary: #1e3c20;
-  --very-light-gray: #f8f7f3;
-  --light-gray: #ecebee;
-  --medium-gray: #64645f;
-  --text-primary: #212121;
-  --text-muted: #8b8b8b;
-  --very-light-green: #e5f6e3;
-  --light-green: #247933;
+  /* OpenSport design tokens */
+  --brand-primary: #1e7a35;
+  --very-light-gray: #F8F7F3;
+  --light-gray: #e5e5e5;
+  --medium-gray: #666666;
+  --text-primary: #171717;
+  --text-muted: #999999;
+  --very-light-green: #e5f3e3;
+  --light-green: #2d8a3e;
 }
 
 .scrollbar-hide::-webkit-scrollbar {

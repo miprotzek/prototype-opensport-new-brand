@@ -76,8 +76,8 @@ function useDragScroll() {
 
 function MenuIcon() {
   return (
-    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#69D55D]">
-      <MenuFeather size={20} color="#1E3C20" />
+    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#43a047]">
+      <MenuFeather size={20} color="#171717" />
     </div>
   );
 }
@@ -207,26 +207,27 @@ type AlertStateConfig = {
   dotColor: string;
   bgColor: string;
   icon: React.ElementType;
+  countColor: string;
   summary: string;
   rules: string[];
 };
 
 const ALERT_STATES: AlertStateConfig[] = [
   {
-    key: "at-risk", label: "At Risk", color: "text-[#c23f3f]", dotColor: "bg-[#c23f3f]",
-    bgColor: "bg-[#fef2f2]", icon: AlertTriangle,
+    key: "at-risk", label: "At Risk", color: "text-[#dc2626]", dotColor: "bg-[#dc2626]",
+    bgColor: "bg-[#fef2f2]", icon: AlertTriangle, countColor: "text-[#dc2626]",
     summary: "Immediate injury or overload concerns detected.",
     rules: ["acute_chronic_ratio", "weekly_load_spike", "red_zone_sprint_spike", "overloading", "approaching_14day_load_limit", "high_deceleration_count", "reduced_max_velocity", "sprint_recovery_spacing"],
   },
   {
-    key: "load-imbalance", label: "Load Imbalance", color: "text-[#b45309]", dotColor: "bg-[#e8b923]",
-    bgColor: "bg-[#fffbeb]", icon: Activity,
+    key: "load-imbalance", label: "Load Imbalance", color: "text-[#d97706]", dotColor: "bg-[#d97706]",
+    bgColor: "bg-[#fffbeb]", icon: Activity, countColor: "text-[#d97706]",
     summary: "Training load is trending above or below baseline.",
     rules: ["four_week_load_change", "four_week_hsr_load_increase", "sprint_exposure_trend_28d", "weekly_max_vs_28day_max", "weekly_load_vs_28day_average", "seasonal_max_distance_exceeded"],
   },
   {
-    key: "performance-signal", label: "Performance Signal", color: "text-[#2563eb]", dotColor: "bg-[#3b82f6]",
-    bgColor: "bg-[#eff6ff]", icon: TrendingUp,
+    key: "performance-signal", label: "Performance Signal", color: "text-[#2563eb]", dotColor: "bg-[#2563eb]",
+    bgColor: "bg-[#eff6ff]", icon: TrendingUp, countColor: "text-[#2563eb]",
     summary: "Performance changes detected during training or match play.",
     rules: ["late_game_speed_drop", "low_work_rate", "positional_output_outlier", "load_trend_decreasing", "consistency_drop", "match_average_vs_baseline", "season_max_achieved"],
   },
@@ -316,24 +317,6 @@ function AlertsOverview({ onSelectState }: { onSelectState: (state: AlertState) 
         </p>
       </div>
 
-      {/* Compact stat bar — quick triage counts */}
-      <div className="flex gap-2 px-4 pb-4 pt-1 animate-fade-up">
-        {statCounts.map((s) => (
-          <button
-            key={s.key}
-            type="button"
-            onClick={() => onSelectState(s.key)}
-            className="flex flex-1 flex-col items-center gap-0.5 rounded-xl border border-[var(--light-gray)] bg-white py-2.5 transition-all hover:shadow-md active:scale-[0.97]"
-          >
-            <div className="flex items-center gap-1.5">
-              <span className={`h-2 w-2 rounded-full ${s.dotColor}`} />
-              <span className="text-xl font-bold text-[var(--text-primary)]">{s.count}</span>
-            </div>
-            <span className="text-[11px] font-medium text-[var(--text-muted)]">{s.label}</span>
-          </button>
-        ))}
-      </div>
-
       {/* State cards */}
       <div className="flex flex-col gap-3 px-4 pb-4">
         {ALERT_STATES.map((stateConfig, i) => {
@@ -350,63 +333,19 @@ function AlertsOverview({ onSelectState }: { onSelectState: (state: AlertState) 
               key={stateConfig.key}
               type="button"
               onClick={() => onSelectState(stateConfig.key)}
-              className="flex flex-col gap-3 rounded-2xl border border-[var(--light-gray)] bg-white p-4 text-left shadow-[0px_2px_12px_0px_rgba(0,0,0,0.04)] transition-all hover:shadow-[0px_4px_20px_0px_rgba(0,0,0,0.08)] active:scale-[0.99] animate-fade-up"
+              className="flex items-center gap-3 rounded-2xl border border-[var(--light-gray)] bg-white p-4 text-left transition-all hover:shadow-[0px_4px_20px_0px_rgba(0,0,0,0.06)] active:scale-[0.99] animate-fade-up"
               style={{ animationDelay: `${i * 80}ms` }}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${stateConfig.bgColor}`}>
-                    <Icon size={18} className={stateConfig.color} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className={`h-2 w-2 rounded-full ${stateConfig.dotColor}`} />
-                      <span className="text-base font-semibold text-[var(--text-primary)]">{stateConfig.label}</span>
-                    </div>
-                    <span className="text-sm text-[var(--text-muted)]">{players.length} {players.length === 1 ? "player" : "players"}</span>
-                  </div>
-                </div>
-                <ChevronRight size={18} className="text-[var(--text-muted)]" />
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${stateConfig.bgColor}`}>
+                <Icon size={18} className={stateConfig.color} />
               </div>
-
-              {/* Top player preview with action */}
-              {topPlayer && (
-                <div className="flex flex-col gap-2 rounded-xl bg-[var(--very-light-gray)] px-3 py-2.5">
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--very-light-green)] text-[11px] font-semibold text-[var(--light-green)]">
-                      {topPlayer.name.split(" ").map((n) => n[0]).join("")}
-                    </div>
-                    <span className="text-sm font-semibold text-[var(--text-primary)]">{topPlayer.name}</span>
-                    <span className={`ml-auto shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                      topPlayer.severity === "High" ? "bg-[#fef2f2] text-[#c23f3f]" : "bg-[#fffbeb] text-[#b45309]"
-                    }`}>
-                      {topPlayer.severity}
-                    </span>
-                  </div>
-                  <p className="text-xs text-[var(--medium-gray)]">
-                    {topPlayer.shortReason} · {topPlayer.metricSnippet.split("·")[0].trim()}
-                  </p>
-                  <p className="text-xs font-medium text-[var(--light-green)]">
-                    Action: {topPlayer.recommendations[0]}
-                  </p>
-                  {players.length > 1 && (
-                    <p className="text-[11px] text-[var(--text-muted)]">+{players.length - 1} more athlete{players.length - 1 > 1 ? "s" : ""}</p>
-                  )}
-                </div>
-              )}
-
-              <div className="flex items-center gap-2">
-                {highCount > 0 && (
-                  <span className="flex items-center gap-1 rounded-full bg-[#fef2f2] px-2 py-0.5 text-xs font-medium text-[#c23f3f]">
-                    {highCount} high
-                  </span>
-                )}
-                {medCount > 0 && (
-                  <span className="flex items-center gap-1 rounded-full bg-[#fffbeb] px-2 py-0.5 text-xs font-medium text-[#b45309]">
-                    {medCount} medium
-                  </span>
-                )}
+              <div className="flex-1 min-w-0">
+                <span className="text-base font-semibold text-[var(--text-primary)]">{stateConfig.label}</span>
+                <p className="mt-0.5 text-sm text-[var(--text-muted)]">
+                  {players.length} {players.length === 1 ? "player" : "players"} · {[highCount > 0 && `${highCount} high`, medCount > 0 && `${medCount} medium`].filter(Boolean).join(", ")}
+                </p>
               </div>
+              <ChevronRight size={18} className="shrink-0 text-[var(--text-muted)]" />
             </button>
           );
         })}
@@ -417,15 +356,15 @@ function AlertsOverview({ onSelectState }: { onSelectState: (state: AlertState) 
         <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">Today&apos;s summary</p>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-[#c23f3f]" />
+            <span className="h-2 w-2 rounded-full bg-[#dc2626]" />
             <span className="text-sm text-[var(--medium-gray)]">{PLAYER_ALERTS.length} new</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-[#e8b923]" />
+            <span className="h-2 w-2 rounded-full bg-[#d97706]" />
             <span className="text-sm text-[var(--medium-gray)]">{PLAYER_ALERTS.length} unresolved</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-[#69D55D]" />
+            <span className="h-2 w-2 rounded-full bg-[#43a047]" />
             <span className="text-sm text-[var(--medium-gray)]">0 reviewed</span>
           </div>
         </div>
@@ -517,8 +456,8 @@ function PlayerListView({
             <div className="flex items-center gap-2 shrink-0">
               <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
                 player.severity === "High"
-                  ? "bg-[#fef2f2] text-[#c23f3f]"
-                  : "bg-[#fffbeb] text-[#b45309]"
+                  ? "bg-[#fef2f2] text-[#dc2626]"
+                  : "bg-[#fffbeb] text-[#d97706]"
               }`}>
                 {player.severity}
               </span>
@@ -581,8 +520,8 @@ function AlertDetailView({
             <h3 className="text-base font-semibold text-[var(--text-primary)]">{player.alertTitle}</h3>
             <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
               player.severity === "High"
-                ? "bg-[#fef2f2] text-[#c23f3f]"
-                : "bg-[#fffbeb] text-[#b45309]"
+                ? "bg-[#fef2f2] text-[#dc2626]"
+                : "bg-[#fffbeb] text-[#d97706]"
             }`}>
               {player.severity}
             </span>
@@ -654,7 +593,7 @@ function AlertDetailView({
           <button
             type="button"
             onClick={() => onSendToChat(player)}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[var(--light-gray)] bg-white py-3 text-sm font-medium text-[#247933] transition-all hover:bg-[var(--very-light-green)] active:scale-[0.98]"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[var(--light-gray)] bg-white py-3 text-sm font-medium text-[#2d8a3e] transition-all hover:bg-[var(--very-light-green)] active:scale-[0.98]"
           >
             <Zap size={16} />
             Discuss with AI Chat
@@ -720,9 +659,9 @@ function AlertDetailView({
               onClick={handleOverride}
               className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl border py-2.5 text-sm font-medium transition-all active:scale-[0.98] ${
                 overrideConfirmed
-                  ? "border-[#c23f3f] bg-[#c23f3f] text-white"
+                  ? "border-[#dc2626] bg-[#dc2626] text-white"
                   : actionTaken === "override"
-                    ? "border-[#c23f3f] bg-[#fef2f2] text-[#c23f3f]"
+                    ? "border-[#dc2626] bg-[#fef2f2] text-[#dc2626]"
                     : "border-[var(--light-gray)] text-[var(--medium-gray)] hover:bg-[var(--very-light-gray)]"
               }`}
             >
@@ -737,7 +676,7 @@ function AlertDetailView({
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-semibold text-[var(--text-primary)]">Add note</p>
             {actionTaken === "override" && !overrideConfirmed && (
-              <span className="text-xs font-medium text-[#c23f3f]">Required for override</span>
+              <span className="text-xs font-medium text-[#dc2626]">Required for override</span>
             )}
           </div>
           <textarea
@@ -747,12 +686,12 @@ function AlertDetailView({
             rows={3}
             className={`w-full rounded-xl border bg-white p-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none transition-colors resize-none ${
               actionTaken === "override" && !overrideConfirmed && !noteText.trim()
-                ? "border-[#c23f3f] focus:border-[#c23f3f]"
+                ? "border-[#dc2626] focus:border-[#dc2626]"
                 : "border-[var(--light-gray)] focus:border-[var(--light-green)]"
             }`}
           />
           {actionTaken === "override" && !overrideConfirmed && !noteText.trim() && (
-            <p className="mt-1 text-xs text-[#c23f3f]">A note is required before confirming an override.</p>
+            <p className="mt-1 text-xs text-[#dc2626]">A note is required before confirming an override.</p>
           )}
           {overrideConfirmed && (
             <div className="mt-2 flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
@@ -875,9 +814,9 @@ function SquadView() {
 
   function getRiskColor(name: string) {
     const alerts = getPlayerAlerts(name);
-    if (alerts.some((a) => a.severity === "High")) return "bg-[#c23f3f]";
-    if (alerts.length > 0) return "bg-[#e8b923]";
-    return "bg-[#69D55D]";
+    if (alerts.some((a) => a.severity === "High")) return "bg-[#dc2626]";
+    if (alerts.length > 0) return "bg-[#d97706]";
+    return "bg-[#43a047]";
   }
 
   return (
@@ -925,16 +864,16 @@ function SquadView() {
 
               <div className="flex flex-col items-end gap-1 shrink-0">
                 <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                  player.availability === "Available" ? "bg-[#f0fdf4] text-[#247933]"
-                    : player.availability === "Limited" ? "bg-[#fffbeb] text-[#b45309]"
-                    : "bg-[#fef2f2] text-[#c23f3f]"
+                  player.availability === "Available" ? "bg-[#f0fdf4] text-[#2d8a3e]"
+                    : player.availability === "Limited" ? "bg-[#fffbeb] text-[#d97706]"
+                    : "bg-[#fef2f2] text-[#dc2626]"
                 }`}>
                   {player.availability}
                 </span>
                 <span className={`text-[11px] font-medium ${
                   player.loadStatus === "Normal" ? "text-[var(--text-muted)]"
-                    : player.loadStatus === "High" ? "text-[#c23f3f]"
-                    : "text-[#b45309]"
+                    : player.loadStatus === "High" ? "text-[#dc2626]"
+                    : "text-[#d97706]"
                 }`}>
                   Load: {player.loadStatus}
                 </span>
@@ -993,7 +932,7 @@ function ExecutiveSummary() {
         <div className="flex flex-col gap-2">
           {topRisks.map((alert, i) => (
             <div key={alert.id} className="flex items-center gap-3 rounded-xl border border-[var(--light-gray)] bg-white p-3">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#fef2f2] text-xs font-bold text-[#c23f3f]">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#fef2f2] text-xs font-bold text-[#dc2626]">
                 {i + 1}
               </span>
               <div className="flex-1 min-w-0">
@@ -1001,7 +940,7 @@ function ExecutiveSummary() {
                 <p className="text-xs text-[var(--text-muted)] truncate">{alert.shortReason}</p>
               </div>
               <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                alert.severity === "High" ? "bg-[#fef2f2] text-[#c23f3f]" : "bg-[#fffbeb] text-[#b45309]"
+                alert.severity === "High" ? "bg-[#fef2f2] text-[#dc2626]" : "bg-[#fffbeb] text-[#d97706]"
               }`}>
                 {alert.severity}
               </span>
@@ -1031,11 +970,11 @@ function ExecutiveSummary() {
         <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">Suggested focus areas</p>
         <ul className="flex flex-col gap-2">
           <li className="flex items-start gap-2 text-sm text-[var(--medium-gray)]">
-            <AlertTriangle size={16} className="shrink-0 mt-0.5 text-[#c23f3f]" />
+            <AlertTriangle size={16} className="shrink-0 mt-0.5 text-[#dc2626]" />
             Review At Risk players before next training session
           </li>
           <li className="flex items-start gap-2 text-sm text-[var(--medium-gray)]">
-            <Activity size={16} className="shrink-0 mt-0.5 text-[#b45309]" />
+            <Activity size={16} className="shrink-0 mt-0.5 text-[#d97706]" />
             Address load imbalance trends in forwards
           </li>
           <li className="flex items-start gap-2 text-sm text-[var(--medium-gray)]">
@@ -1451,7 +1390,7 @@ function AIChatView({
             ))}
           </div>
         )}
-        <div className="flex flex-col gap-2 rounded-2xl border-2 border-[var(--light-green)] bg-white p-2.5 shadow-[0px_0px_15px_0px_#dfdde2]">
+        <div className="flex flex-col gap-2 rounded-2xl border-2 border-[var(--light-green)] bg-white p-2.5 shadow-[0px_0px_15px_0px_rgba(0,0,0,0.06)]">
           <div className="px-1.5">
             <textarea
               ref={textareaRef}
@@ -1460,7 +1399,7 @@ function AIChatView({
               onKeyDown={handleKeyDown}
               placeholder="Type # to browse Drills, Sessions, and Timeframes, @ for Participants, and ! for Metrics."
               rows={2}
-              className="w-full resize-none bg-transparent text-base leading-6 text-[var(--text-primary)] placeholder:text-[#a9a9a6] focus:outline-none"
+              className="w-full resize-none bg-transparent text-base leading-6 text-[var(--text-primary)] placeholder:text-[#999] focus:outline-none"
             />
           </div>
 
@@ -1492,7 +1431,7 @@ function AIChatView({
               onClick={handleSubmit}
               disabled={!hasText}
               className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors ${
-                hasText ? "bg-[var(--light-green)] active:scale-95" : "bg-[#a9a9a6]"
+                hasText ? "bg-[var(--light-green)] active:scale-95" : "bg-[#c5c9c3]"
               }`}
             >
               <ArrowUp size={16} color="white" />
@@ -1577,7 +1516,7 @@ export default function InsightsPage() {
       {/* Content area */}
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden pt-1">
         {/* Tab bar */}
-        <div className="flex h-[47px] shrink-0 items-center justify-between border-b border-[var(--light-gray)] px-4">
+        <div className="flex h-[47px] shrink-0 items-center justify-between border-b border-[var(--very-light-gray)] px-4">
           <div className="flex h-full gap-6">
             <button
               type="button"
@@ -1589,7 +1528,7 @@ export default function InsightsPage() {
                   AI alerts
                 </span>
               </div>
-              <div className={`h-[2px] w-full ${activeTab === "alerts" ? "bg-[#69D55D]" : "bg-transparent"}`} />
+              <div className={`h-[2px] w-full ${activeTab === "alerts" ? "bg-[#43a047]" : "bg-transparent"}`} />
             </button>
             <button
               type="button"
@@ -1601,7 +1540,7 @@ export default function InsightsPage() {
                   AI chat
                 </span>
               </div>
-              <div className={`h-[2px] w-full ${activeTab === "chat" ? "bg-[#69D55D]" : "bg-transparent"}`} />
+              <div className={`h-[2px] w-full ${activeTab === "chat" ? "bg-[#43a047]" : "bg-transparent"}`} />
             </button>
           </div>
 
