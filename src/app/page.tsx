@@ -18,6 +18,16 @@ import {
   Eye,
   CheckCircle,
   XCircle,
+  Users,
+  Share2,
+  Shield,
+  RefreshCw,
+  Clock,
+  Sliders,
+  UserPlus,
+  Settings,
+  ToggleLeft,
+  ToggleRight,
 } from "react-feather";
 
 /* ═══════════════════ Drag Scroll ═══════════════════ */
@@ -198,6 +208,7 @@ type AlertStateConfig = {
   bgColor: string;
   icon: React.ElementType;
   summary: string;
+  rules: string[];
 };
 
 const ALERT_STATES: AlertStateConfig[] = [
@@ -205,18 +216,50 @@ const ALERT_STATES: AlertStateConfig[] = [
     key: "at-risk", label: "At Risk", color: "text-[#c23f3f]", dotColor: "bg-[#c23f3f]",
     bgColor: "bg-[#fef2f2]", icon: AlertTriangle,
     summary: "Immediate injury or overload concerns detected.",
+    rules: ["acute_chronic_ratio", "weekly_load_spike", "red_zone_sprint_spike", "overloading", "approaching_14day_load_limit", "high_deceleration_count", "reduced_max_velocity", "sprint_recovery_spacing"],
   },
   {
     key: "load-imbalance", label: "Load Imbalance", color: "text-[#b45309]", dotColor: "bg-[#e8b923]",
     bgColor: "bg-[#fffbeb]", icon: Activity,
     summary: "Training load is trending above or below baseline.",
+    rules: ["four_week_load_change", "four_week_hsr_load_increase", "sprint_exposure_trend_28d", "weekly_max_vs_28day_max", "weekly_load_vs_28day_average", "seasonal_max_distance_exceeded"],
   },
   {
     key: "performance-signal", label: "Performance Signal", color: "text-[#247933]", dotColor: "bg-[#69D55D]",
     bgColor: "bg-[#f0fdf4]", icon: TrendingUp,
     summary: "Performance changes detected during training or match play.",
+    rules: ["late_game_speed_drop", "low_work_rate", "positional_output_outlier", "load_trend_decreasing", "consistency_drop", "match_average_vs_baseline", "season_max_achieved"],
   },
 ];
+
+/* ═══════════════════ Squad Data ═══════════════════ */
+
+type SquadPlayer = {
+  id: number;
+  name: string;
+  position: string;
+  group: "Forward" | "Back" | "Halfback";
+  availability: "Available" | "Limited" | "Unavailable";
+  loadStatus: "Normal" | "High" | "Low";
+};
+
+const SQUAD_PLAYERS: SquadPlayer[] = [
+  { id: 1, name: "Jack Innard", position: "Hooker", group: "Forward", availability: "Limited", loadStatus: "High" },
+  { id: 2, name: "Deian Gwynne", position: "Scrum-half", group: "Halfback", availability: "Available", loadStatus: "Low" },
+  { id: 3, name: "Max Llewellyn", position: "Centre", group: "Back", availability: "Limited", loadStatus: "High" },
+  { id: 4, name: "Ben Loader", position: "Wing", group: "Back", availability: "Available", loadStatus: "Normal" },
+  { id: 5, name: "Josh Basham", position: "Flanker", group: "Forward", availability: "Limited", loadStatus: "High" },
+  { id: 6, name: "Kirill Gotovtsev", position: "Prop", group: "Forward", availability: "Available", loadStatus: "Normal" },
+  { id: 7, name: "Freddie Thomas", position: "Lock", group: "Forward", availability: "Available", loadStatus: "Normal" },
+  { id: 8, name: "Lewis Ludlow", position: "Flanker", group: "Forward", availability: "Available", loadStatus: "Normal" },
+  { id: 9, name: "Tomos Williams", position: "Scrum-half", group: "Halfback", availability: "Available", loadStatus: "Normal" },
+  { id: 10, name: "Santiago Carreras", position: "Fullback", group: "Back", availability: "Available", loadStatus: "Normal" },
+];
+
+/* ═══════════════════ Settings Data ═══════════════════ */
+
+type AIModule = { id: string; name: string; description: string; enabled: boolean };
+type SensitivityMode = "Conservative" | "Balanced" | "Aggressive";
 
 const SUGGESTIONS = [
   "Who reached the highest top speed during match day warmup?",
@@ -240,11 +283,33 @@ const DEFAULT_AI_RESPONSE =
 
 function AlertsOverview({ onSelectState }: { onSelectState: (state: AlertState) => void }) {
   const totalPlayers = new Set(PLAYER_ALERTS.map((a) => a.name)).size;
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated] = useState(() => {
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  });
+
+  function handleRefresh() {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 1200);
+  }
 
   return (
     <div className="flex-1 overflow-y-auto">
+      {/* T1: Updated timestamp + T10: Refresh indicator */}
       <div className="px-4 pt-5 pb-3">
-        <h2 className="text-xl font-bold text-[var(--text-primary)]">Alerts overview</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold text-[var(--text-primary)]">Alerts overview</h2>
+          <button
+            type="button"
+            aria-label="Refresh alerts"
+            onClick={handleRefresh}
+            className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+          >
+            <RefreshCw size={12} className={refreshing ? "animate-spin" : ""} />
+            Updated {lastUpdated}
+          </button>
+        </div>
         <p className="mt-1 text-sm text-[var(--text-muted)]">
           {totalPlayers} players need attention today
         </p>
@@ -257,6 +322,7 @@ function AlertsOverview({ onSelectState }: { onSelectState: (state: AlertState) 
           const highCount = players.filter((p) => p.severity === "High").length;
           const medCount = players.filter((p) => p.severity === "Medium").length;
           const Icon = stateConfig.icon;
+          const topPlayer = players.sort((a, b) => (a.severity === "High" ? -1 : 1) - (b.severity === "High" ? -1 : 1))[0];
 
           return (
             <button
@@ -284,8 +350,25 @@ function AlertsOverview({ onSelectState }: { onSelectState: (state: AlertState) 
 
               <p className="text-sm leading-5 text-[var(--medium-gray)]">{stateConfig.summary}</p>
 
-              {(highCount > 0 || medCount > 0) && (
-                <div className="flex items-center gap-3">
+              {/* T2: Top player preview */}
+              {topPlayer && (
+                <div className="flex items-center gap-2 rounded-xl bg-[var(--very-light-gray)] px-3 py-2">
+                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--very-light-green)] text-[10px] font-semibold text-[var(--light-green)]">
+                    {topPlayer.name.split(" ").map((n) => n[0]).join("")}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-semibold text-[var(--text-primary)]">{topPlayer.name}</span>
+                    <span className="text-xs text-[var(--text-muted)]"> — {topPlayer.shortReason}</span>
+                  </div>
+                  {players.length > 1 && (
+                    <span className="shrink-0 text-xs text-[var(--text-muted)]">+{players.length - 1} more</span>
+                  )}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between">
+                {/* Severity badges */}
+                <div className="flex items-center gap-2">
                   {highCount > 0 && (
                     <span className="flex items-center gap-1 rounded-full bg-[#fef2f2] px-2 py-0.5 text-xs font-medium text-[#c23f3f]">
                       {highCount} high
@@ -297,7 +380,11 @@ function AlertsOverview({ onSelectState }: { onSelectState: (state: AlertState) 
                     </span>
                   )}
                 </div>
-              )}
+                {/* T9: Rule count */}
+                <span className="text-[10px] text-[var(--text-muted)]">
+                  Powered by {stateConfig.rules.length} rules
+                </span>
+              </div>
             </button>
           );
         })}
@@ -436,6 +523,17 @@ function AlertDetailView({
   const stateConfig = ALERT_STATES.find((s) => s.key === player.state)!;
   const [actionTaken, setActionTaken] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
+  const [trendWindow, setTrendWindow] = useState<"7d" | "14d" | "28d">("7d");
+  const [overrideConfirmed, setOverrideConfirmed] = useState(false);
+
+  function handleOverride() {
+    if (actionTaken === "override" && !overrideConfirmed) {
+      if (!noteText.trim()) return;
+      setOverrideConfirmed(true);
+      return;
+    }
+    setActionTaken("override");
+  }
 
   return (
     <div className="flex flex-1 flex-col min-h-0">
@@ -481,10 +579,30 @@ function AlertDetailView({
           ))}
         </div>
 
-        {/* Trend chart placeholder */}
+        {/* T4: Trend chart with time window selector */}
         <div className="mx-4 mt-3 rounded-2xl border border-[var(--light-gray)] bg-white p-4 animate-fade-up" style={{ animationDelay: "160ms" }}>
-          <p className="text-sm font-semibold text-[var(--text-primary)]">Load trend</p>
-          <p className="text-xs text-[var(--text-muted)] mt-0.5">7-day average vs 28-day baseline</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">Load trend</p>
+              <p className="text-xs text-[var(--text-muted)] mt-0.5">{trendWindow === "7d" ? "7-day" : trendWindow === "14d" ? "14-day" : "28-day"} average vs baseline</p>
+            </div>
+            <div className="flex rounded-lg border border-[var(--light-gray)] overflow-hidden">
+              {(["7d", "14d", "28d"] as const).map((w) => (
+                <button
+                  key={w}
+                  type="button"
+                  onClick={() => setTrendWindow(w)}
+                  className={`px-2.5 py-1 text-xs font-medium transition-colors ${
+                    trendWindow === w
+                      ? "bg-[var(--very-light-green)] text-[var(--light-green)]"
+                      : "bg-white text-[var(--text-muted)] hover:bg-[var(--very-light-gray)]"
+                  }`}
+                >
+                  {w}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="mt-3 flex h-24 items-center justify-center rounded-xl bg-[var(--very-light-gray)]">
             <Activity size={24} className="text-[var(--text-muted)]" />
           </div>
@@ -548,6 +666,19 @@ function AlertDetailView({
             <Activity size={16} />
             {actionTaken === "monitor" ? "Monitoring" : "Monitor"}
           </button>
+          {/* T3: Assign follow-up */}
+          <button
+            type="button"
+            onClick={() => setActionTaken("assign")}
+            className={`flex items-center justify-center gap-2 rounded-xl border py-3 text-sm font-semibold transition-all active:scale-[0.98] ${
+              actionTaken === "assign"
+                ? "border-[var(--light-green)] bg-[var(--very-light-green)] text-[var(--light-green)]"
+                : "border-[var(--light-gray)] bg-white text-[var(--text-primary)] hover:bg-[var(--very-light-gray)]"
+            }`}
+          >
+            <UserPlus size={16} />
+            {actionTaken === "assign" ? "Follow-up assigned" : "Assign follow-up"}
+          </button>
           <div className="flex gap-2">
             <button
               type="button"
@@ -561,31 +692,52 @@ function AlertDetailView({
               <CheckCircle size={14} />
               Mark expected
             </button>
+            {/* T5: Override with note requirement */}
             <button
               type="button"
-              onClick={() => setActionTaken("override")}
+              onClick={handleOverride}
               className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl border py-2.5 text-sm font-medium transition-all active:scale-[0.98] ${
-                actionTaken === "override"
-                  ? "border-[#c23f3f] bg-[#fef2f2] text-[#c23f3f]"
-                  : "border-[var(--light-gray)] text-[var(--medium-gray)] hover:bg-[var(--very-light-gray)]"
+                overrideConfirmed
+                  ? "border-[#c23f3f] bg-[#c23f3f] text-white"
+                  : actionTaken === "override"
+                    ? "border-[#c23f3f] bg-[#fef2f2] text-[#c23f3f]"
+                    : "border-[var(--light-gray)] text-[var(--medium-gray)] hover:bg-[var(--very-light-gray)]"
               }`}
             >
               <XCircle size={14} />
-              Override
+              {overrideConfirmed ? "Override logged" : "Override"}
             </button>
           </div>
         </div>
 
-        {/* Note section */}
+        {/* T5: Note section with override requirement */}
         <div className="mx-4 mt-4 mb-6 animate-fade-up" style={{ animationDelay: "480ms" }}>
-          <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">Add note</p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-semibold text-[var(--text-primary)]">Add note</p>
+            {actionTaken === "override" && !overrideConfirmed && (
+              <span className="text-xs font-medium text-[#c23f3f]">Required for override</span>
+            )}
+          </div>
           <textarea
             value={noteText}
             onChange={(e) => setNoteText(e.target.value)}
-            placeholder="Explain context or override reason..."
+            placeholder={actionTaken === "override" ? "Explain why this alert is being overridden (required)..." : "Explain context or override reason..."}
             rows={3}
-            className="w-full rounded-xl border border-[var(--light-gray)] bg-white p-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--light-green)] focus:outline-none transition-colors resize-none"
+            className={`w-full rounded-xl border bg-white p-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none transition-colors resize-none ${
+              actionTaken === "override" && !overrideConfirmed && !noteText.trim()
+                ? "border-[#c23f3f] focus:border-[#c23f3f]"
+                : "border-[var(--light-gray)] focus:border-[var(--light-green)]"
+            }`}
           />
+          {actionTaken === "override" && !overrideConfirmed && !noteText.trim() && (
+            <p className="mt-1 text-xs text-[#c23f3f]">A note is required before confirming an override.</p>
+          )}
+          {overrideConfirmed && (
+            <div className="mt-2 flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+              <Clock size={12} />
+              Override logged at {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} — stored in audit log
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -597,7 +749,10 @@ function AlertDetailView({
 type AlertsScreen =
   | { view: "overview" }
   | { view: "player-list"; state: AlertState }
-  | { view: "detail"; player: PlayerAlert };
+  | { view: "detail"; player: PlayerAlert }
+  | { view: "squad" }
+  | { view: "summary" }
+  | { view: "settings" };
 
 function AIAlertsView({ onSendToChat }: { onSendToChat: (player: PlayerAlert) => void }) {
   const [screen, setScreen] = useState<AlertsScreen>({ view: "overview" });
@@ -622,8 +777,403 @@ function AIAlertsView({ onSendToChat }: { onSendToChat: (player: PlayerAlert) =>
     );
   }
 
+  if (screen.view === "squad") {
+    return (
+      <div className="flex flex-1 flex-col min-h-0">
+        <div className="shrink-0 flex items-center gap-3 px-4 pt-4 pb-2">
+          <button type="button" aria-label="Go back" onClick={() => setScreen({ view: "overview" })} className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
+            <ArrowLeft size={20} />
+          </button>
+        </div>
+        <SquadView />
+      </div>
+    );
+  }
+
+  if (screen.view === "summary") {
+    return (
+      <div className="flex flex-1 flex-col min-h-0">
+        <div className="shrink-0 flex items-center gap-3 px-4 pt-4 pb-2">
+          <button type="button" aria-label="Go back" onClick={() => setScreen({ view: "overview" })} className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
+            <ArrowLeft size={20} />
+          </button>
+        </div>
+        <ExecutiveSummary />
+      </div>
+    );
+  }
+
+  if (screen.view === "settings") {
+    return (
+      <div className="flex flex-1 flex-col min-h-0">
+        <div className="shrink-0 flex items-center gap-3 px-4 pt-4 pb-2">
+          <button type="button" aria-label="Go back" onClick={() => setScreen({ view: "overview" })} className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
+            <ArrowLeft size={20} />
+          </button>
+        </div>
+        <SettingsView />
+      </div>
+    );
+  }
+
   return (
-    <AlertsOverview onSelectState={(state) => setScreen({ view: "player-list", state })} />
+    <div className="flex flex-1 flex-col min-h-0">
+      <AlertsOverview onSelectState={(state) => setScreen({ view: "player-list", state })} />
+      {/* Quick access bar for new screens */}
+      <div className="shrink-0 flex items-center justify-around border-t border-[var(--light-gray)] bg-white py-2 px-4">
+        <button type="button" onClick={() => setScreen({ view: "squad" })} className="flex flex-col items-center gap-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
+          <Users size={18} />
+          <span className="text-[10px] font-medium">Squad</span>
+        </button>
+        <button type="button" onClick={() => setScreen({ view: "summary" })} className="flex flex-col items-center gap-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
+          <Zap size={18} />
+          <span className="text-[10px] font-medium">Summary</span>
+        </button>
+        <button type="button" onClick={() => setScreen({ view: "settings" })} className="flex flex-col items-center gap-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
+          <Settings size={18} />
+          <span className="text-[10px] font-medium">Settings</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════ T6: Squad View ═══════════════════ */
+
+function SquadView() {
+  const [filterGroup, setFilterGroup] = useState<"All" | "Forward" | "Back" | "Halfback">("All");
+
+  const filtered = filterGroup === "All"
+    ? SQUAD_PLAYERS
+    : SQUAD_PLAYERS.filter((p) => p.group === filterGroup);
+
+  function getPlayerAlerts(name: string) {
+    return PLAYER_ALERTS.filter((a) => a.name === name);
+  }
+
+  function getRiskColor(name: string) {
+    const alerts = getPlayerAlerts(name);
+    if (alerts.some((a) => a.severity === "High")) return "bg-[#c23f3f]";
+    if (alerts.length > 0) return "bg-[#e8b923]";
+    return "bg-[#69D55D]";
+  }
+
+  return (
+    <div className="flex flex-1 flex-col min-h-0">
+      <div className="shrink-0 px-4 pt-5 pb-2">
+        <h2 className="text-xl font-bold text-[var(--text-primary)]">Squad overview</h2>
+        <p className="mt-1 text-sm text-[var(--text-muted)]">{SQUAD_PLAYERS.length} athletes · {PLAYER_ALERTS.length} active alerts</p>
+      </div>
+
+      <div className="shrink-0 flex gap-2 px-4 py-2 overflow-x-auto scrollbar-hide">
+        {(["All", "Forward", "Back", "Halfback"] as const).map((g) => (
+          <button
+            key={g}
+            type="button"
+            onClick={() => setFilterGroup(g)}
+            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              filterGroup === g
+                ? "bg-[var(--very-light-green)] text-[var(--light-green)]"
+                : "bg-[var(--very-light-gray)] text-[var(--medium-gray)] hover:bg-[var(--light-gray)]"
+            }`}
+          >
+            {g === "All" ? `All (${SQUAD_PLAYERS.length})` : `${g}s`}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        {filtered.map((player, i) => {
+          const alerts = getPlayerAlerts(player.name);
+          return (
+            <div
+              key={player.id}
+              className="flex items-center gap-3 border-b border-[var(--light-gray)] px-4 py-3 animate-fade-up"
+              style={{ animationDelay: `${i * 40}ms` }}
+            >
+              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--very-light-green)] text-sm font-semibold text-[var(--light-green)]">
+                {player.name.split(" ").map((n) => n[0]).join("")}
+                <span className={`absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white ${getRiskColor(player.name)}`} />
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-semibold text-[var(--text-primary)] truncate">{player.name}</p>
+                <p className="text-xs text-[var(--text-muted)]">{player.position} · {player.group}</p>
+              </div>
+
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  player.availability === "Available" ? "bg-[#f0fdf4] text-[#247933]"
+                    : player.availability === "Limited" ? "bg-[#fffbeb] text-[#b45309]"
+                    : "bg-[#fef2f2] text-[#c23f3f]"
+                }`}>
+                  {player.availability}
+                </span>
+                <span className={`text-[10px] font-medium ${
+                  player.loadStatus === "Normal" ? "text-[var(--text-muted)]"
+                    : player.loadStatus === "High" ? "text-[#c23f3f]"
+                    : "text-[#b45309]"
+                }`}>
+                  Load: {player.loadStatus}
+                </span>
+                {alerts.length > 0 && (
+                  <span className="text-[10px] text-[var(--text-muted)]">{alerts.length} alert{alerts.length > 1 ? "s" : ""}</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════ T7: Executive Summary ═══════════════════ */
+
+function ExecutiveSummary() {
+  const [dismissed, setDismissed] = useState(false);
+
+  const highAlerts = PLAYER_ALERTS.filter((a) => a.severity === "High");
+  const topRisks = highAlerts.length > 0 ? highAlerts.slice(0, 3) : PLAYER_ALERTS.slice(0, 3);
+
+  const summaryText = `${PLAYER_ALERTS.length} alerts active across ${new Set(PLAYER_ALERTS.map((a) => a.name)).size} athletes. ${highAlerts.length} high-severity alerts require immediate attention. Load imbalance patterns detected in ${PLAYER_ALERTS.filter((a) => a.state === "load-imbalance").length} players. Focus on At Risk group today.`;
+
+  if (dismissed) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4">
+        <CheckCircle size={32} className="text-[var(--light-green)]" />
+        <p className="text-base font-semibold text-[var(--text-primary)]">Briefing dismissed</p>
+        <button type="button" onClick={() => setDismissed(false)} className="text-sm font-medium text-[var(--light-green)] underline underline-offset-2">
+          View again
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 overflow-y-auto">
+      <div className="px-4 pt-5 pb-3">
+        <div className="flex items-center gap-2">
+          <Zap size={18} className="text-[var(--light-green)]" />
+          <h2 className="text-xl font-bold text-[var(--text-primary)]">Executive summary</h2>
+        </div>
+        <p className="mt-1 text-sm text-[var(--text-muted)]">AI-generated briefing · Today</p>
+      </div>
+
+      {/* AI Summary */}
+      <div className="mx-4 rounded-2xl border border-[var(--light-green)] bg-[var(--very-light-green)] p-4 animate-fade-up">
+        <p className="text-sm leading-6 text-[var(--brand-primary)]">{summaryText}</p>
+      </div>
+
+      {/* Top 3 risks */}
+      <div className="px-4 mt-4 animate-fade-up" style={{ animationDelay: "100ms" }}>
+        <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">Top risks</p>
+        <div className="flex flex-col gap-2">
+          {topRisks.map((alert, i) => (
+            <div key={alert.id} className="flex items-center gap-3 rounded-xl border border-[var(--light-gray)] bg-white p-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#fef2f2] text-xs font-bold text-[#c23f3f]">
+                {i + 1}
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{alert.name}</p>
+                <p className="text-xs text-[var(--text-muted)] truncate">{alert.shortReason}</p>
+              </div>
+              <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                alert.severity === "High" ? "bg-[#fef2f2] text-[#c23f3f]" : "bg-[#fffbeb] text-[#b45309]"
+              }`}>
+                {alert.severity}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Cohort trends */}
+      <div className="px-4 mt-4 animate-fade-up" style={{ animationDelay: "200ms" }}>
+        <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">Cohort trends</p>
+        <div className="grid grid-cols-3 gap-2">
+          {ALERT_STATES.map((s) => {
+            const count = PLAYER_ALERTS.filter((a) => a.state === s.key).length;
+            return (
+              <div key={s.key} className={`rounded-xl ${s.bgColor} p-3 text-center`}>
+                <p className="text-lg font-bold text-[var(--text-primary)]">{count}</p>
+                <p className="text-[10px] font-medium text-[var(--text-muted)]">{s.label}</p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Suggested focus */}
+      <div className="mx-4 mt-4 rounded-2xl border border-[var(--light-gray)] bg-white p-4 animate-fade-up" style={{ animationDelay: "300ms" }}>
+        <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">Suggested focus areas</p>
+        <ul className="flex flex-col gap-2">
+          <li className="flex items-start gap-2 text-sm text-[var(--medium-gray)]">
+            <AlertTriangle size={14} className="shrink-0 mt-0.5 text-[#c23f3f]" />
+            Review At Risk players before next training session
+          </li>
+          <li className="flex items-start gap-2 text-sm text-[var(--medium-gray)]">
+            <Activity size={14} className="shrink-0 mt-0.5 text-[#b45309]" />
+            Address load imbalance trends in forwards
+          </li>
+          <li className="flex items-start gap-2 text-sm text-[var(--medium-gray)]">
+            <TrendingUp size={14} className="shrink-0 mt-0.5 text-[#247933]" />
+            Monitor late-game speed patterns across squad
+          </li>
+        </ul>
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-2 px-4 mt-4 mb-6 animate-fade-up" style={{ animationDelay: "400ms" }}>
+        <button
+          type="button"
+          onClick={() => setDismissed(true)}
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[var(--light-gray)] bg-white py-3 text-sm font-medium text-[var(--text-primary)] transition-all hover:bg-[var(--very-light-gray)] active:scale-[0.98]"
+        >
+          <X size={14} />
+          Dismiss
+        </button>
+        <button
+          type="button"
+          onClick={() => navigator.clipboard?.writeText(summaryText)}
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-3 text-sm font-medium text-white transition-all hover:opacity-90 active:scale-[0.98]"
+        >
+          <Share2 size={14} />
+          Share
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════ T8: Settings & AI Control ═══════════════════ */
+
+function SettingsView() {
+  const [sensitivity, setSensitivity] = useState<SensitivityMode>("Balanced");
+  const [modules, setModules] = useState<AIModule[]>([
+    { id: "injury_risk", name: "Injury & Risk Detection", description: "Monitors acute:chronic ratios, load spikes, and overload signals", enabled: true },
+    { id: "load_analysis", name: "Load Analysis", description: "Tracks training load trends and imbalance patterns", enabled: true },
+    { id: "performance", name: "Performance Monitoring", description: "Detects speed drops, work rate changes, and output outliers", enabled: true },
+    { id: "planning", name: "Planning & Compliance", description: "Compares actual load to planned targets", enabled: false },
+    { id: "recovery", name: "Recovery Monitoring", description: "Monitors recovery metrics and readiness indicators", enabled: true },
+  ]);
+
+  function toggleModule(id: string) {
+    setModules((prev) => prev.map((m) => m.id === id ? { ...m, enabled: !m.enabled } : m));
+  }
+
+  const configHistory = [
+    { action: "Sensitivity changed to Balanced", by: "Admin", time: "Today 08:15" },
+    { action: "Planning module disabled", by: "Admin", time: "Yesterday 14:30" },
+    { action: "Recovery module enabled", by: "Admin", time: "Mar 10, 09:00" },
+  ];
+
+  return (
+    <div className="flex-1 overflow-y-auto">
+      <div className="px-4 pt-5 pb-3">
+        <div className="flex items-center gap-2">
+          <Settings size={18} className="text-[var(--text-primary)]" />
+          <h2 className="text-xl font-bold text-[var(--text-primary)]">AI settings</h2>
+        </div>
+        <p className="mt-1 text-sm text-[var(--text-muted)]">Govern AI modules and sensitivity</p>
+      </div>
+
+      {/* Sensitivity selector */}
+      <div className="mx-4 rounded-2xl border border-[var(--light-gray)] bg-white p-4 animate-fade-up">
+        <div className="flex items-center gap-2 mb-3">
+          <Sliders size={14} className="text-[var(--text-primary)]" />
+          <p className="text-sm font-semibold text-[var(--text-primary)]">Detection sensitivity</p>
+        </div>
+        <div className="flex rounded-xl border border-[var(--light-gray)] overflow-hidden">
+          {(["Conservative", "Balanced", "Aggressive"] as SensitivityMode[]).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setSensitivity(mode)}
+              className={`flex-1 py-2.5 text-xs font-medium transition-colors ${
+                sensitivity === mode
+                  ? "bg-[var(--very-light-green)] text-[var(--light-green)]"
+                  : "bg-white text-[var(--medium-gray)] hover:bg-[var(--very-light-gray)]"
+              }`}
+            >
+              {mode}
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-[var(--text-muted)]">
+          {sensitivity === "Conservative" && "Fewer alerts, higher confidence thresholds. Best for reducing noise."}
+          {sensitivity === "Balanced" && "Standard thresholds. Good balance of sensitivity and specificity."}
+          {sensitivity === "Aggressive" && "More alerts, lower thresholds. Best for catching early signals."}
+        </p>
+      </div>
+
+      {/* AI Modules */}
+      <div className="px-4 mt-4 animate-fade-up" style={{ animationDelay: "100ms" }}>
+        <div className="flex items-center gap-2 mb-3">
+          <Shield size={14} className="text-[var(--text-primary)]" />
+          <p className="text-sm font-semibold text-[var(--text-primary)]">AI modules</p>
+        </div>
+        <div className="flex flex-col gap-2">
+          {modules.map((mod) => (
+            <div key={mod.id} className="flex items-center gap-3 rounded-xl border border-[var(--light-gray)] bg-white p-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-[var(--text-primary)]">{mod.name}</p>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">{mod.description}</p>
+              </div>
+              <button type="button" aria-label={`Toggle ${mod.name}`} onClick={() => toggleModule(mod.id)} className="shrink-0">
+                {mod.enabled
+                  ? <ToggleRight size={28} className="text-[var(--light-green)]" />
+                  : <ToggleLeft size={28} className="text-[var(--light-gray)]" />
+                }
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Threshold info */}
+      <div className="mx-4 mt-4 rounded-2xl border border-[var(--light-gray)] bg-[var(--very-light-gray)] p-4 animate-fade-up" style={{ animationDelay: "200ms" }}>
+        <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">Active thresholds</p>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-lg bg-white p-2.5">
+            <p className="text-xs text-[var(--text-muted)]">AC ratio limit</p>
+            <p className="text-sm font-bold text-[var(--text-primary)]">1.20</p>
+          </div>
+          <div className="rounded-lg bg-white p-2.5">
+            <p className="text-xs text-[var(--text-muted)]">Load deviation</p>
+            <p className="text-sm font-bold text-[var(--text-primary)]">±20%</p>
+          </div>
+          <div className="rounded-lg bg-white p-2.5">
+            <p className="text-xs text-[var(--text-muted)]">Speed drop</p>
+            <p className="text-sm font-bold text-[var(--text-primary)]">-8%</p>
+          </div>
+          <div className="rounded-lg bg-white p-2.5">
+            <p className="text-xs text-[var(--text-muted)]">Total rules</p>
+            <p className="text-sm font-bold text-[var(--text-primary)]">{ALERT_STATES.reduce((a, s) => a + s.rules.length, 0)}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Configuration history */}
+      <div className="px-4 mt-4 mb-6 animate-fade-up" style={{ animationDelay: "300ms" }}>
+        <div className="flex items-center gap-2 mb-3">
+          <Clock size={14} className="text-[var(--text-primary)]" />
+          <p className="text-sm font-semibold text-[var(--text-primary)]">Configuration history</p>
+        </div>
+        <div className="flex flex-col gap-2">
+          {configHistory.map((item, i) => (
+            <div key={i} className="flex items-start gap-2.5 rounded-xl border border-[var(--light-gray)] bg-white p-3">
+              <div className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--text-muted)]" />
+              <div>
+                <p className="text-sm text-[var(--text-primary)]">{item.action}</p>
+                <p className="text-xs text-[var(--text-muted)]">{item.by} · {item.time}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-[var(--text-muted)]">All changes are logged. Role-based permissions apply.</p>
+      </div>
+    </div>
   );
 }
 
