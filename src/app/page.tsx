@@ -2,17 +2,22 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Info,
-  Copy,
   Check,
   Menu as MenuFeather,
   ChevronDown,
-  Filter,
+  ChevronRight,
+  ArrowLeft,
   X,
   Edit,
   MessageSquare,
   ArrowUp,
   Zap,
+  AlertTriangle,
+  Activity,
+  TrendingUp,
+  Eye,
+  CheckCircle,
+  XCircle,
 } from "react-feather";
 
 /* ═══════════════════ Drag Scroll ═══════════════════ */
@@ -69,22 +74,148 @@ function MenuIcon() {
 
 /* ═══════════════════════ Data ═══════════════════════ */
 
-type InsightCard = {
-  category: string;
-  severity: string;
-  title: string;
-  description: string;
+type AlertState = "at-risk" | "load-imbalance" | "performance-signal";
+
+type PlayerAlert = {
+  id: number;
+  name: string;
+  state: AlertState;
+  severity: "High" | "Medium";
+  shortReason: string;
+  metricSnippet: string;
   updated: string;
-  accentColor: string;
+  alertTitle: string;
+  interpretation: string;
+  metrics: { label: string; value: string }[];
+  explanation: string;
+  recommendations: string[];
 };
 
-const INSIGHTS: InsightCard[] = [
-  { category: "Injury risk & Fatigue", severity: "High", title: "Jack Innard", description: "Acute: Chronic ratio elevated: 1.41 (7d avg: 351.8, 28d avg: 249.1).", updated: "Updated Feb 4th", accentColor: "bg-[#c23f3f]" },
-  { category: "Injury risk & Fatigue", severity: "Medium", title: "Deian Gwynne", description: "is under baseline by 28.1%.", updated: "Updated Today", accentColor: "bg-[#e8b923]" },
-  { category: "Match & Training performance", severity: "Medium", title: "Ben Loader", description: "Late game speed drop detected: Q4 maxSpeed (6.93 m/s) is 10.0% below Q1-3 average (7.70 m/s)", updated: "Updated Feb 4th", accentColor: "bg-[#e8b923]" },
-  { category: "Match & Training performance", severity: "High", title: "Josh Basham", description: "Late game speed drop detected: Q4 maxSpeed (5.72 m/s) is 17.0% below Q1-3 average (6.89 m/s).", updated: "Updated Feb 4th", accentColor: "bg-[#c23f3f]" },
-  { category: "Injury risk & Fatigue", severity: "Medium", title: "Max Llewellyn", description: "is over baseline by 90.9%.", updated: "Updated Feb 4th", accentColor: "bg-[#e8b923]" },
-  { category: "Match & Training performance", severity: "Medium", title: "Kirill Gotovtsev", description: "Late game speed drop detected: Q4 maxSpeed (5.17 m/s) is 21.5% below Q1-3 average (6.58 m/s).", updated: "Updated Feb 4th", accentColor: "bg-[#e8b923]" },
+const PLAYER_ALERTS: PlayerAlert[] = [
+  {
+    id: 1, name: "Jack Innard", state: "at-risk", severity: "High",
+    shortReason: "Acute:chronic ratio elevated",
+    metricSnippet: "1.41 ratio · updated today",
+    updated: "Updated today",
+    alertTitle: "Acute:chronic ratio elevated",
+    interpretation: "Current 7-day load is significantly above the 28-day baseline.",
+    metrics: [
+      { label: "Current value", value: "1.41" },
+      { label: "Baseline", value: "1.00–1.20" },
+      { label: "Deviation", value: "+18%" },
+      { label: "Threshold", value: "1.20" },
+    ],
+    explanation: "Jack's recent load increased faster than his normal baseline, which may indicate elevated fatigue or overload risk.",
+    recommendations: ["Review training volume", "Monitor next session", "Validate with staff context"],
+  },
+  {
+    id: 2, name: "Deian Gwynne", state: "at-risk", severity: "Medium",
+    shortReason: "Load is under baseline",
+    metricSnippet: "28.1% below normal · updated today",
+    updated: "Updated today",
+    alertTitle: "Load under baseline",
+    interpretation: "Current training load is significantly below the expected range.",
+    metrics: [
+      { label: "Current load", value: "179.2" },
+      { label: "Baseline", value: "249.1" },
+      { label: "Deviation", value: "-28.1%" },
+      { label: "Threshold", value: "±20%" },
+    ],
+    explanation: "Deian's recent training load has dropped below his established baseline, which may indicate under-training or recovery from an unreported issue.",
+    recommendations: ["Check for unreported injury", "Review recent attendance", "Adjust training plan if needed"],
+  },
+  {
+    id: 3, name: "Max Llewellyn", state: "at-risk", severity: "Medium",
+    shortReason: "Load is above baseline",
+    metricSnippet: "90.9% above normal · updated Feb 4",
+    updated: "Updated Feb 4th",
+    alertTitle: "Load above baseline",
+    interpretation: "Current training load is well above the expected range.",
+    metrics: [
+      { label: "Current load", value: "475.6" },
+      { label: "Baseline", value: "249.1" },
+      { label: "Deviation", value: "+90.9%" },
+      { label: "Threshold", value: "±20%" },
+    ],
+    explanation: "Max's recent training volume has spiked significantly above his normal range, increasing the risk of overuse injury.",
+    recommendations: ["Reduce session intensity", "Monitor fatigue markers", "Consider rest day"],
+  },
+  {
+    id: 4, name: "Ben Loader", state: "load-imbalance", severity: "Medium",
+    shortReason: "Late game speed drop detected",
+    metricSnippet: "10.0% drop Q4 vs Q1-3 · updated Feb 4",
+    updated: "Updated Feb 4th",
+    alertTitle: "Late game speed drop",
+    interpretation: "Q4 max speed (6.93 m/s) is 10.0% below Q1-3 average (7.70 m/s).",
+    metrics: [
+      { label: "Q4 speed", value: "6.93 m/s" },
+      { label: "Q1-3 avg", value: "7.70 m/s" },
+      { label: "Drop", value: "-10.0%" },
+      { label: "Threshold", value: "-8%" },
+    ],
+    explanation: "Ben's speed output decreased in the final quarter, suggesting accumulated fatigue during match play.",
+    recommendations: ["Review conditioning program", "Check hydration protocol", "Monitor in next match"],
+  },
+  {
+    id: 5, name: "Josh Basham", state: "load-imbalance", severity: "High",
+    shortReason: "Late game speed drop detected",
+    metricSnippet: "17.0% drop Q4 vs Q1-3 · updated Feb 4",
+    updated: "Updated Feb 4th",
+    alertTitle: "Late game speed drop",
+    interpretation: "Q4 max speed (5.72 m/s) is 17.0% below Q1-3 average (6.89 m/s).",
+    metrics: [
+      { label: "Q4 speed", value: "5.72 m/s" },
+      { label: "Q1-3 avg", value: "6.89 m/s" },
+      { label: "Drop", value: "-17.0%" },
+      { label: "Threshold", value: "-8%" },
+    ],
+    explanation: "Josh showed a significant drop in speed output in the final quarter, well above the acceptable threshold.",
+    recommendations: ["Assess match fitness", "Review workload distribution", "Consider substitution strategy"],
+  },
+  {
+    id: 6, name: "Kirill Gotovtsev", state: "performance-signal", severity: "Medium",
+    shortReason: "Late game speed drop detected",
+    metricSnippet: "21.5% drop Q4 vs Q1-3 · updated Feb 4",
+    updated: "Updated Feb 4th",
+    alertTitle: "Late game speed drop",
+    interpretation: "Q4 max speed (5.17 m/s) is 21.5% below Q1-3 average (6.58 m/s).",
+    metrics: [
+      { label: "Q4 speed", value: "5.17 m/s" },
+      { label: "Q1-3 avg", value: "6.58 m/s" },
+      { label: "Drop", value: "-21.5%" },
+      { label: "Threshold", value: "-8%" },
+    ],
+    explanation: "Kirill's speed dropped substantially in the final quarter, indicating potential conditioning issues during match play.",
+    recommendations: ["Review game-day preparation", "Evaluate conditioning baseline", "Monitor trend over next matches"],
+  },
+];
+
+type AlertStateConfig = {
+  key: AlertState;
+  label: string;
+  color: string;
+  dotColor: string;
+  bgColor: string;
+  icon: React.ElementType;
+  summary: string;
+};
+
+const ALERT_STATES: AlertStateConfig[] = [
+  {
+    key: "at-risk", label: "At Risk", color: "text-[#c23f3f]", dotColor: "bg-[#c23f3f]",
+    bgColor: "bg-[#fef2f2]", icon: AlertTriangle,
+    summary: "Immediate injury or overload concerns detected.",
+  },
+  {
+    key: "load-imbalance", label: "Load Imbalance", color: "text-[#b45309]", dotColor: "bg-[#e8b923]",
+    bgColor: "bg-[#fffbeb]", icon: Activity,
+    summary: "Training load is trending above or below baseline.",
+  },
+  {
+    key: "performance-signal", label: "Performance Signal", color: "text-[#247933]", dotColor: "bg-[#69D55D]",
+    bgColor: "bg-[#f0fdf4]", icon: TrendingUp,
+    summary: "Performance changes detected during training or match play.",
+  },
 ];
 
 const SUGGESTIONS = [
@@ -92,15 +223,6 @@ const SUGGESTIONS = [
   "Which forwards covered the most total distance in training this week?",
   "Which players recorded the most high-intensity efforts this week?",
 ];
-
-const FILTER_OPTIONS = {
-  severity: { label: "All severity", options: ["Medium", "High"] },
-  type: { label: "All types", options: ["Injury risk & Fatigue", "Match & Training performance"] },
-  date: { label: "Date range", options: ["Last 7 days", "Last 30 days", "Last 90 days", "02/02/2026 - 12/03/2026"] },
-  athlete: { label: "All athletes", options: [...new Set(INSIGHTS.map((i) => i.title))] },
-} as const;
-
-type FilterKey = keyof typeof FILTER_OPTIONS;
 
 const AI_RESPONSES: Record<string, string> = {
   "Who reached the highest top speed during match day warmup?":
@@ -114,270 +236,394 @@ const AI_RESPONSES: Record<string, string> = {
 const DEFAULT_AI_RESPONSE =
   "Based on the available GPS and performance data, I can see several interesting patterns. The key metrics show variations across the squad that are worth monitoring.\n\nWould you like me to drill deeper into any specific player or metric?";
 
-/* ═══════════════════ Sub-components ═══════════════════ */
+/* ═══════════════════ Screen 1 — Alerts Overview ═══════════════════ */
 
-function InsightCardItem({ card, onSendToChat, onFilterBy }: { card: InsightCard; onSendToChat: (card: InsightCard) => void; onFilterBy: (key: FilterKey, value: string) => void }) {
-  const [copied, setCopied] = useState(false);
-
-  function handleCopy() {
-    navigator.clipboard?.writeText(`${card.title}: ${card.description}`);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  }
+function AlertsOverview({ onSelectState }: { onSelectState: (state: AlertState) => void }) {
+  const totalPlayers = new Set(PLAYER_ALERTS.map((a) => a.name)).size;
 
   return (
-    <article className="flex flex-col gap-4 border-b border-[var(--light-gray)] bg-white p-4 shadow-[0px_4px_20px_0px_rgba(0,0,0,0.02)]">
-      <div className="flex flex-col gap-4">
-        <button type="button" onClick={() => onFilterBy("type", card.category)} className="text-sm font-medium leading-5 text-[var(--brand-primary)] text-left hover:underline underline-offset-2 transition-all">
-          {card.category}
-        </button>
-        <div className="flex gap-2.5 items-start">
-          <div className={`w-1 shrink-0 self-stretch rounded-full ${card.accentColor}`} />
-          <p className="min-w-0 flex-1 text-base leading-[22px] tracking-[-0.32px] text-[var(--text-primary)]">
-            <span className="font-semibold">{card.title}</span>{" "}
-            {card.description.includes(":") ? (
-              <>
-                <span className="font-semibold">{card.description.split(":")[0]}:</span>
-                <span className="font-normal"> {card.description.substring(card.description.indexOf(":") + 1).trim()}</span>
-              </>
-            ) : (
-              <span className="font-semibold">{card.description}</span>
-            )}
-          </p>
-        </div>
-      </div>
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-medium leading-5 text-[var(--text-muted)] whitespace-nowrap">
-          {card.updated}
+    <div className="flex-1 overflow-y-auto">
+      <div className="px-4 pt-5 pb-3">
+        <h2 className="text-xl font-bold text-[var(--text-primary)]">Alerts overview</h2>
+        <p className="mt-1 text-sm text-[var(--text-muted)]">
+          {totalPlayers} players need attention today
         </p>
-        <div className="flex gap-2.5 items-center">
-          <button type="button" aria-label="More info" className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[var(--very-light-gray)] text-[#247933] hover:bg-[var(--light-gray)] hover:scale-105 active:scale-95 transition-all duration-150">
-            <Info size={18} />
-          </button>
-          <button type="button" aria-label="Send to AI chat" onClick={() => onSendToChat(card)} className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[var(--very-light-gray)] text-[#247933] hover:bg-[var(--light-gray)] hover:scale-105 active:scale-95 transition-all duration-150">
-            <Zap size={18} />
-          </button>
-          <button
-            type="button"
-            aria-label="Copy"
-            onClick={handleCopy}
-            className={`flex h-8 w-8 items-center justify-center rounded-2xl transition-all duration-150 ${
-              copied ? "bg-[var(--very-light-green)] text-[var(--light-green)] animate-pop-in" : "bg-[var(--very-light-gray)] text-[#247933] hover:bg-[var(--light-gray)] hover:scale-105 active:scale-95"
-            }`}
-          >
-            {copied ? <Check size={16} /> : <Copy size={18} />}
-          </button>
-        </div>
       </div>
-    </article>
-  );
-}
 
-/* ── Filter item: dropdown when unselected, removable chip when selected ── */
+      <div className="flex flex-col gap-3 px-4 pb-4">
+        {ALERT_STATES.map((stateConfig, i) => {
+          const players = PLAYER_ALERTS.filter((a) => a.state === stateConfig.key);
+          if (players.length === 0) return null;
+          const highCount = players.filter((p) => p.severity === "High").length;
+          const medCount = players.filter((p) => p.severity === "Medium").length;
+          const Icon = stateConfig.icon;
 
-function FilterItem({
-  filterKey,
-  selectedValue,
-  onSelect,
-  isOpen,
-  onToggle,
-}: {
-  filterKey: FilterKey;
-  selectedValue: string | null;
-  onSelect: (key: FilterKey, value: string | null) => void;
-  isOpen: boolean;
-  onToggle: (key: FilterKey) => void;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const config = FILTER_OPTIONS[filterKey];
-  const [alignRight, setAlignRight] = useState(false);
-
-  useEffect(() => {
-    if (isOpen && ref.current) {
-      const rect = ref.current.getBoundingClientRect();
-      const container = ref.current.closest("[data-app-root]");
-      const maxRight = container ? container.getBoundingClientRect().right : window.innerWidth;
-      setAlignRight(rect.left + 200 > maxRight);
-    }
-  }, [isOpen]);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onToggle(filterKey);
-    }
-    if (isOpen) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen, filterKey, onToggle]);
-
-  if (selectedValue) {
-    return (
-      <div ref={ref} className="relative">
-        <span className="flex items-center gap-1 rounded border border-[var(--light-green)] bg-[#fefefe] py-1.5 pl-2.5 pr-1.5 text-sm font-medium text-[#061d0e]">
-          <button type="button" onClick={() => onToggle(filterKey)} className="hover:underline">
-            {selectedValue}
-          </button>
-          <button
-            type="button"
-            aria-label={`Remove ${selectedValue}`}
-            onClick={() => onSelect(filterKey, null)}
-            className="ml-0.5 flex h-5 w-5 items-center justify-center rounded-full text-[#061d0e] transition-colors hover:bg-[var(--light-gray)]"
-          >
-            <X size={14} />
-          </button>
-        </span>
-
-        {isOpen && (
-          <div className={`absolute top-full z-40 mt-1.5 w-max min-w-[180px] overflow-hidden rounded-xl border border-[var(--light-gray)] bg-white shadow-lg animate-in ${alignRight ? "right-0" : "left-0"}`}>
-            {config.options.map((opt) => (
-              <button
-                key={opt}
-                type="button"
-                onClick={() => { onSelect(filterKey, opt); onToggle(filterKey); }}
-                className={`flex w-full items-center justify-between px-3 py-2.5 text-left text-sm transition-colors hover:bg-[var(--very-light-gray)] ${
-                  selectedValue === opt ? "font-semibold text-[var(--light-green)] bg-[var(--very-light-green)]" : "text-[var(--text-primary)]"
-                }`}
-              >
-                <span>{opt}</span>
-                {selectedValue === opt && <Check size={14} />}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => onToggle(filterKey)}
-        className={`flex items-center gap-1 rounded border px-2.5 py-1.5 text-sm font-medium transition-all active:scale-[0.97] ${
-          isOpen
-            ? "border-[var(--light-green)] bg-white text-[var(--text-primary)] shadow-sm"
-            : "border-[var(--light-gray)] bg-white text-[var(--text-primary)] hover:border-[var(--medium-gray)]"
-        }`}
-      >
-        {config.label}
-        <ChevronDown size={14} className={`transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
-      </button>
-
-      {isOpen && (
-        <div className={`absolute top-full z-40 mt-1.5 w-max min-w-[180px] overflow-hidden rounded-xl border border-[var(--light-gray)] bg-white shadow-lg animate-in ${alignRight ? "right-0" : "left-0"}`}>
-          {config.options.map((opt) => (
+          return (
             <button
-              key={opt}
+              key={stateConfig.key}
               type="button"
-              onClick={() => { onSelect(filterKey, opt); onToggle(filterKey); }}
-              className="flex w-full items-center px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition-colors hover:bg-[var(--very-light-gray)]"
+              onClick={() => onSelectState(stateConfig.key)}
+              className="flex flex-col gap-3 rounded-2xl border border-[var(--light-gray)] bg-white p-4 text-left shadow-[0px_2px_12px_0px_rgba(0,0,0,0.04)] transition-all hover:shadow-[0px_4px_20px_0px_rgba(0,0,0,0.08)] active:scale-[0.99] animate-fade-up"
+              style={{ animationDelay: `${i * 80}ms` }}
             >
-              {opt}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${stateConfig.bgColor}`}>
+                    <Icon size={18} className={stateConfig.color} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className={`h-2 w-2 rounded-full ${stateConfig.dotColor}`} />
+                      <span className="text-base font-semibold text-[var(--text-primary)]">{stateConfig.label}</span>
+                    </div>
+                    <span className="text-sm text-[var(--text-muted)]">{players.length} {players.length === 1 ? "player" : "players"}</span>
+                  </div>
+                </div>
+                <ChevronRight size={18} className="text-[var(--text-muted)]" />
+              </div>
+
+              <p className="text-sm leading-5 text-[var(--medium-gray)]">{stateConfig.summary}</p>
+
+              {(highCount > 0 || medCount > 0) && (
+                <div className="flex items-center gap-3">
+                  {highCount > 0 && (
+                    <span className="flex items-center gap-1 rounded-full bg-[#fef2f2] px-2 py-0.5 text-xs font-medium text-[#c23f3f]">
+                      {highCount} high
+                    </span>
+                  )}
+                  {medCount > 0 && (
+                    <span className="flex items-center gap-1 rounded-full bg-[#fffbeb] px-2 py-0.5 text-xs font-medium text-[#b45309]">
+                      {medCount} medium
+                    </span>
+                  )}
+                </div>
+              )}
             </button>
-          ))}
+          );
+        })}
+      </div>
+
+      {/* Daily summary */}
+      <div className="mx-4 mb-4 rounded-2xl border border-[var(--light-gray)] bg-[var(--very-light-gray)] p-4 animate-fade-up" style={{ animationDelay: "300ms" }}>
+        <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">Today&apos;s summary</p>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-[#c23f3f]" />
+            <span className="text-sm text-[var(--medium-gray)]">{PLAYER_ALERTS.length} new alerts</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-[#e8b923]" />
+            <span className="text-sm text-[var(--medium-gray)]">{PLAYER_ALERTS.length} unresolved</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-[#69D55D]" />
+            <span className="text-sm text-[var(--medium-gray)]">0 reviewed</span>
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
 
-/* ── AI Alerts View ── */
+/* ═══════════════════ Screen 2 — Player List by State ═══════════════════ */
 
-function AIAlertsView({
-  showFilters,
-  activeFilters,
-  onFilterChange,
-  onClearFilters,
-  onSendToChat,
-  onShowFilters,
+function PlayerListView({
+  stateKey,
+  onBack,
+  onSelectPlayer,
 }: {
-  showFilters: boolean;
-  activeFilters: Record<FilterKey, string | null>;
-  onFilterChange: (key: FilterKey, value: string | null) => void;
-  onClearFilters: () => void;
-  onSendToChat: (card: InsightCard) => void;
-  onShowFilters: () => void;
+  stateKey: AlertState;
+  onBack: () => void;
+  onSelectPlayer: (player: PlayerAlert) => void;
 }) {
-  const [openDropdown, setOpenDropdown] = useState<FilterKey | null>(null);
+  const stateConfig = ALERT_STATES.find((s) => s.key === stateKey)!;
+  const players = PLAYER_ALERTS.filter((a) => a.state === stateKey);
+  const [sortBy, setSortBy] = useState<"severity" | "latest">("severity");
 
-  const hasActiveFilters = Object.values(activeFilters).some(Boolean);
-
-  const handleToggle = useCallback((key: FilterKey) => {
-    setOpenDropdown((prev) => (prev === key ? null : key));
-  }, []);
-
-  const handleQuickFilter = useCallback((key: FilterKey, value: string) => {
-    if (!showFilters) onShowFilters();
-    onFilterChange(key, value);
-  }, [showFilters, onShowFilters, onFilterChange]);
-
-  const filteredInsights = INSIGHTS.filter((card) => {
-    if (activeFilters.severity && card.severity !== activeFilters.severity) return false;
-    if (activeFilters.type && card.category !== activeFilters.type) return false;
-    if (activeFilters.athlete && card.title !== activeFilters.athlete) return false;
-    return true;
+  const sorted = [...players].sort((a, b) => {
+    if (sortBy === "severity") {
+      const order = { High: 0, Medium: 1 };
+      return order[a.severity] - order[b.severity];
+    }
+    return 0;
   });
 
   return (
     <div className="flex flex-1 flex-col min-h-0">
-      {showFilters && (
-        <div className="shrink-0 border-b border-[var(--light-gray)] animate-slide-down relative z-30">
-          <div className="flex flex-wrap items-center gap-2 bg-white px-4 py-2.5">
-            {(Object.keys(FILTER_OPTIONS) as FilterKey[]).map((key) => (
-              <FilterItem
-                key={key}
-                filterKey={key}
-                selectedValue={activeFilters[key]}
-                onSelect={onFilterChange}
-                isOpen={openDropdown === key}
-                onToggle={handleToggle}
-              />
-            ))}
-            {hasActiveFilters && (
-              <button
-                type="button"
-                onClick={onClearFilters}
-                className="ml-auto text-sm font-medium text-[var(--light-green)] underline underline-offset-2 transition-colors hover:text-[var(--brand-primary)]"
-              >
-                Clear all
-              </button>
-            )}
+      {/* Header */}
+      <div className="shrink-0 flex items-center gap-3 px-4 pt-4 pb-2">
+        <button type="button" aria-label="Go back" onClick={onBack} className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
+          <ArrowLeft size={20} />
+        </button>
+        <div>
+          <div className="flex items-center gap-2">
+            <span className={`h-2 w-2 rounded-full ${stateConfig.dotColor}`} />
+            <h2 className="text-lg font-bold text-[var(--text-primary)]">{stateConfig.label}</h2>
           </div>
+          <p className="text-sm text-[var(--text-muted)]">{players.length} {players.length === 1 ? "player needs" : "players need"} review</p>
         </div>
-      )}
+      </div>
 
-      {showFilters && hasActiveFilters && (
-        <div className="shrink-0 bg-white px-4 py-2 border-b border-[var(--light-gray)]">
-          <p className="text-xs font-medium text-[var(--text-muted)]">
-            {filteredInsights.length} {filteredInsights.length === 1 ? "result" : "results"}
-          </p>
-        </div>
-      )}
+      {/* Sort chips */}
+      <div className="shrink-0 flex gap-2 px-4 py-2">
+        {(["severity", "latest"] as const).map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => setSortBy(s)}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              sortBy === s
+                ? "bg-[var(--very-light-green)] text-[var(--light-green)]"
+                : "bg-[var(--very-light-gray)] text-[var(--medium-gray)] hover:bg-[var(--light-gray)]"
+            }`}
+          >
+            {s === "severity" ? "By severity" : "By latest"}
+          </button>
+        ))}
+      </div>
 
+      {/* Player list */}
       <div className="flex-1 overflow-y-auto">
-        {filteredInsights.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 py-20 text-center animate-fade-in">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--very-light-gray)] text-[var(--text-muted)]">
-              <Filter size={20} />
+        {sorted.map((player, i) => (
+          <button
+            key={player.id}
+            type="button"
+            onClick={() => onSelectPlayer(player)}
+            className="flex w-full items-center gap-3 border-b border-[var(--light-gray)] px-4 py-3.5 text-left transition-colors hover:bg-[var(--very-light-gray)] active:bg-[var(--light-gray)] animate-fade-up"
+            style={{ animationDelay: `${i * 60}ms` }}
+          >
+            {/* Avatar */}
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--very-light-green)] text-sm font-semibold text-[var(--light-green)]">
+              {player.name.split(" ").map((n) => n[0]).join("")}
             </div>
-            <p className="text-base font-medium text-[var(--text-primary)]">No alerts match</p>
-            <p className="max-w-[200px] text-sm text-[var(--text-muted)]">Try removing some filters to see more results.</p>
-            <button
-              type="button"
-              onClick={onClearFilters}
-              className="mt-1 rounded-lg bg-[var(--very-light-green)] px-4 py-2 text-sm font-medium text-[var(--light-green)] transition-colors hover:bg-[#d4efd2]"
-            >
-              Clear all filters
-            </button>
-          </div>
-        ) : (
-          filteredInsights.map((card, i) => (
-            <div key={i} className="animate-fade-up" style={{ animationDelay: `${i * 60}ms` }}>
-              <InsightCardItem card={card} onSendToChat={onSendToChat} onFilterBy={handleQuickFilter} />
+
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <p className="text-[15px] font-semibold text-[var(--text-primary)] truncate">{player.name}</p>
+              <p className="text-sm text-[var(--medium-gray)] truncate">{player.shortReason}</p>
+              <p className="text-xs text-[var(--text-muted)] mt-0.5">{player.metricSnippet}</p>
             </div>
-          ))
-        )}
+
+            {/* Severity + chevron */}
+            <div className="flex items-center gap-2 shrink-0">
+              <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                player.severity === "High"
+                  ? "bg-[#fef2f2] text-[#c23f3f]"
+                  : "bg-[#fffbeb] text-[#b45309]"
+              }`}>
+                {player.severity}
+              </span>
+              <ChevronRight size={16} className="text-[var(--text-muted)]" />
+            </div>
+          </button>
+        ))}
       </div>
     </div>
+  );
+}
+
+/* ═══════════════════ Screen 3 — Alert Detail / Decision ═══════════════════ */
+
+function AlertDetailView({
+  player,
+  onBack,
+  onSendToChat,
+}: {
+  player: PlayerAlert;
+  onBack: () => void;
+  onSendToChat: (player: PlayerAlert) => void;
+}) {
+  const stateConfig = ALERT_STATES.find((s) => s.key === player.state)!;
+  const [actionTaken, setActionTaken] = useState<string | null>(null);
+  const [noteText, setNoteText] = useState("");
+
+  return (
+    <div className="flex flex-1 flex-col min-h-0">
+      {/* Header */}
+      <div className="shrink-0 flex items-center gap-3 px-4 pt-4 pb-3 border-b border-[var(--light-gray)]">
+        <button type="button" aria-label="Go back" onClick={onBack} className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
+          <ArrowLeft size={20} />
+        </button>
+        <div>
+          <h2 className="text-lg font-bold text-[var(--text-primary)]">{player.name}</h2>
+          <div className="flex items-center gap-1.5">
+            <span className={`h-1.5 w-1.5 rounded-full ${stateConfig.dotColor}`} />
+            <span className="text-sm text-[var(--text-muted)]">{stateConfig.label}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto">
+        {/* Summary card */}
+        <div className="mx-4 mt-4 rounded-2xl border border-[var(--light-gray)] bg-white p-4 shadow-[0px_2px_8px_0px_rgba(0,0,0,0.04)] animate-fade-up">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="text-base font-semibold text-[var(--text-primary)]">{player.alertTitle}</h3>
+            <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+              player.severity === "High"
+                ? "bg-[#fef2f2] text-[#c23f3f]"
+                : "bg-[#fffbeb] text-[#b45309]"
+            }`}>
+              {player.severity}
+            </span>
+          </div>
+          <p className="mt-2 text-sm leading-5 text-[var(--medium-gray)]">{player.interpretation}</p>
+          <p className="mt-2 text-xs text-[var(--text-muted)]">{player.updated}</p>
+        </div>
+
+        {/* Metrics grid */}
+        <div className="mx-4 mt-3 grid grid-cols-2 gap-2 animate-fade-up" style={{ animationDelay: "80ms" }}>
+          {player.metrics.map((m) => (
+            <div key={m.label} className="rounded-xl border border-[var(--light-gray)] bg-white p-3">
+              <p className="text-xs text-[var(--text-muted)]">{m.label}</p>
+              <p className="mt-1 text-lg font-bold text-[var(--text-primary)]">{m.value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Trend chart placeholder */}
+        <div className="mx-4 mt-3 rounded-2xl border border-[var(--light-gray)] bg-white p-4 animate-fade-up" style={{ animationDelay: "160ms" }}>
+          <p className="text-sm font-semibold text-[var(--text-primary)]">Load trend</p>
+          <p className="text-xs text-[var(--text-muted)] mt-0.5">7-day average vs 28-day baseline</p>
+          <div className="mt-3 flex h-24 items-center justify-center rounded-xl bg-[var(--very-light-gray)]">
+            <Activity size={24} className="text-[var(--text-muted)]" />
+          </div>
+        </div>
+
+        {/* Explanation */}
+        <div className="mx-4 mt-3 rounded-2xl border border-[var(--light-gray)] bg-white p-4 animate-fade-up" style={{ animationDelay: "240ms" }}>
+          <p className="text-sm font-semibold text-[var(--text-primary)]">Why this alert appeared</p>
+          <p className="mt-2 text-sm leading-5 text-[var(--medium-gray)]">{player.explanation}</p>
+        </div>
+
+        {/* Recommended actions */}
+        <div className="mx-4 mt-3 rounded-2xl border border-[var(--light-green)] bg-[var(--very-light-green)] p-4 animate-fade-up" style={{ animationDelay: "320ms" }}>
+          <p className="text-sm font-semibold text-[var(--brand-primary)]">Suggested next steps</p>
+          <ul className="mt-2 flex flex-col gap-1.5">
+            {player.recommendations.map((r) => (
+              <li key={r} className="flex items-start gap-2 text-sm text-[var(--brand-primary)]">
+                <Check size={14} className="shrink-0 mt-0.5 text-[var(--light-green)]" />
+                {r}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* AI Chat action */}
+        <div className="mx-4 mt-3 animate-fade-up" style={{ animationDelay: "360ms" }}>
+          <button
+            type="button"
+            onClick={() => onSendToChat(player)}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[var(--light-gray)] bg-white py-3 text-sm font-medium text-[#247933] transition-all hover:bg-[var(--very-light-green)] active:scale-[0.98]"
+          >
+            <Zap size={16} />
+            Discuss with AI Chat
+          </button>
+        </div>
+
+        {/* Decision actions */}
+        <div className="mx-4 mt-4 flex flex-col gap-2 animate-fade-up" style={{ animationDelay: "400ms" }}>
+          <p className="text-sm font-semibold text-[var(--text-primary)] mb-1">Take action</p>
+          <button
+            type="button"
+            onClick={() => setActionTaken("review")}
+            className={`flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition-all active:scale-[0.98] ${
+              actionTaken === "review"
+                ? "bg-[var(--light-green)] text-white"
+                : "bg-[var(--brand-primary)] text-white hover:opacity-90"
+            }`}
+          >
+            <Eye size={16} />
+            {actionTaken === "review" ? "Marked for review" : "Needs review"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActionTaken("monitor")}
+            className={`flex items-center justify-center gap-2 rounded-xl border py-3 text-sm font-semibold transition-all active:scale-[0.98] ${
+              actionTaken === "monitor"
+                ? "border-[var(--light-green)] bg-[var(--very-light-green)] text-[var(--light-green)]"
+                : "border-[var(--light-gray)] bg-white text-[var(--text-primary)] hover:bg-[var(--very-light-gray)]"
+            }`}
+          >
+            <Activity size={16} />
+            {actionTaken === "monitor" ? "Monitoring" : "Monitor"}
+          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setActionTaken("expected")}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl border py-2.5 text-sm font-medium transition-all active:scale-[0.98] ${
+                actionTaken === "expected"
+                  ? "border-[var(--light-green)] bg-[var(--very-light-green)] text-[var(--light-green)]"
+                  : "border-[var(--light-gray)] text-[var(--medium-gray)] hover:bg-[var(--very-light-gray)]"
+              }`}
+            >
+              <CheckCircle size={14} />
+              Mark expected
+            </button>
+            <button
+              type="button"
+              onClick={() => setActionTaken("override")}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl border py-2.5 text-sm font-medium transition-all active:scale-[0.98] ${
+                actionTaken === "override"
+                  ? "border-[#c23f3f] bg-[#fef2f2] text-[#c23f3f]"
+                  : "border-[var(--light-gray)] text-[var(--medium-gray)] hover:bg-[var(--very-light-gray)]"
+              }`}
+            >
+              <XCircle size={14} />
+              Override
+            </button>
+          </div>
+        </div>
+
+        {/* Note section */}
+        <div className="mx-4 mt-4 mb-6 animate-fade-up" style={{ animationDelay: "480ms" }}>
+          <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">Add note</p>
+          <textarea
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+            placeholder="Explain context or override reason..."
+            rows={3}
+            className="w-full rounded-xl border border-[var(--light-gray)] bg-white p-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--light-green)] focus:outline-none transition-colors resize-none"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════ Alerts Navigation Wrapper ═══════════════════ */
+
+type AlertsScreen =
+  | { view: "overview" }
+  | { view: "player-list"; state: AlertState }
+  | { view: "detail"; player: PlayerAlert };
+
+function AIAlertsView({ onSendToChat }: { onSendToChat: (player: PlayerAlert) => void }) {
+  const [screen, setScreen] = useState<AlertsScreen>({ view: "overview" });
+
+  if (screen.view === "detail") {
+    return (
+      <AlertDetailView
+        player={screen.player}
+        onBack={() => setScreen({ view: "player-list", state: screen.player.state })}
+        onSendToChat={onSendToChat}
+      />
+    );
+  }
+
+  if (screen.view === "player-list") {
+    return (
+      <PlayerListView
+        stateKey={screen.state}
+        onBack={() => setScreen({ view: "overview" })}
+        onSelectPlayer={(player) => setScreen({ view: "detail", player })}
+      />
+    );
+  }
+
+  return (
+    <AlertsOverview onSelectState={(state) => setScreen({ view: "player-list", state })} />
   );
 }
 
@@ -694,13 +940,6 @@ function AIChatView({
 
 export default function InsightsPage() {
   const [activeTab, setActiveTab] = useState<"alerts" | "chat">("alerts");
-  const [showFilters, setShowFilters] = useState(false);
-  const [activeFilters, setActiveFilters] = useState<Record<FilterKey, string | null>>({
-    severity: null,
-    type: null,
-    date: null,
-    athlete: null,
-  });
 
   const [conversations, setConversations] = useState<Conversation[]>([
     { id: 1, title: "New chat", messages: [], timestamp: "Now" },
@@ -708,16 +947,6 @@ export default function InsightsPage() {
   const [activeConvId, setActiveConvId] = useState(1);
   const [showChatHistory, setShowChatHistory] = useState(false);
   const nextConvId = useRef(2);
-
-  const hasActiveFilters = Object.values(activeFilters).some(Boolean);
-
-  function handleFilterChange(key: FilterKey, value: string | null) {
-    setActiveFilters((prev) => ({ ...prev, [key]: value }));
-  }
-
-  function handleClearFilters() {
-    setActiveFilters({ severity: null, type: null, date: null, athlete: null });
-  }
 
   function handleNewChat() {
     const newId = nextConvId.current++;
@@ -737,13 +966,13 @@ export default function InsightsPage() {
     setActiveConvId(id);
   }
 
-  function handleAlertToChat(card: InsightCard) {
+  function handleAlertToChat(player: PlayerAlert) {
     const newId = nextConvId.current++;
-    const prompt = `Validate this alert and suggest follow up actions:\n\nAlert details: "${card.title} ${card.description}"\nAthlete: ${card.title}\nCategory: ${card.category}`;
+    const prompt = `Validate this alert and suggest follow up actions:\n\nAlert: ${player.alertTitle}\nAthlete: ${player.name}\nSeverity: ${player.severity}\nDetails: ${player.interpretation}\nCategory: ${ALERT_STATES.find((s) => s.key === player.state)?.label}`;
     const userMsg: ChatMessage = { id: 1, role: "user", text: prompt };
     const newConv: Conversation = {
       id: newId,
-      title: `Alert: ${card.title}`,
+      title: `Alert: ${player.name}`,
       messages: [userMsg],
       timestamp: "Now",
     };
@@ -805,23 +1034,7 @@ export default function InsightsPage() {
           </div>
 
           {activeTab === "alerts" ? (
-            <button
-              type="button"
-              aria-label="Toggle filters"
-              onClick={() => setShowFilters(!showFilters)}
-              className={`relative flex h-[34px] w-[34px] items-center justify-center rounded-[4px] border transition-all active:scale-95 ${
-                showFilters || hasActiveFilters
-                  ? "border-[var(--light-green)] bg-[var(--very-light-green)] text-[var(--light-green)]"
-                  : "border-[var(--light-gray)] text-[var(--text-primary)] hover:bg-[var(--very-light-gray)]"
-              }`}
-            >
-              <Filter size={16} />
-              {hasActiveFilters && (
-                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--light-green)] text-[10px] font-bold text-white">
-                  {Object.values(activeFilters).filter(Boolean).length}
-                </span>
-              )}
-            </button>
+            <div />
           ) : (
             <div className="flex items-center gap-2">
               <button type="button" aria-label="New chat" onClick={handleNewChat} className="flex h-[34px] w-[34px] items-center justify-center rounded-[4px] border border-[var(--light-gray)] text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
@@ -846,14 +1059,7 @@ export default function InsightsPage() {
         {/* Tab content */}
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white">
           {activeTab === "alerts" ? (
-            <AIAlertsView
-              showFilters={showFilters}
-              activeFilters={activeFilters}
-              onFilterChange={handleFilterChange}
-              onClearFilters={handleClearFilters}
-              onSendToChat={handleAlertToChat}
-              onShowFilters={() => setShowFilters(true)}
-            />
+            <AIAlertsView onSendToChat={handleAlertToChat} />
           ) : (
             <AIChatView
               conversations={conversations}
