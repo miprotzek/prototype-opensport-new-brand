@@ -21,7 +21,6 @@ import {
   Users,
   Share2,
   Shield,
-  RefreshCw,
   Clock,
   Sliders,
   UserPlus,
@@ -324,14 +323,10 @@ const DEFAULT_AI_RESPONSE =
 function AlertsOverview({
   onSelectState,
   reviewedCount,
-  refreshing,
-  onRefresh,
   lastUpdated,
 }: {
   onSelectState: (state: AlertState) => void;
   reviewedCount: number;
-  refreshing: boolean;
-  onRefresh: () => void;
   lastUpdated: string;
 }) {
   const totalPlayers = new Set(PLAYER_ALERTS.map((a) => a.name)).size;
@@ -341,14 +336,6 @@ function AlertsOverview({
 
   return (
     <div className="relative flex-1 overflow-y-auto">
-      {refreshing && (
-        <div className="absolute inset-0 z-10 flex items-start justify-center bg-white/80 pt-16 animate-fade-in">
-          <div className="flex items-center gap-2 rounded-xl bg-[var(--text-primary)] px-4 py-2.5 text-sm font-medium text-white shadow-lg">
-            <RefreshCw size={16} className="animate-spin" />
-            Refreshing data…
-          </div>
-        </div>
-      )}
       {/* Page title + hero */}
       <div className="px-4 pt-5">
         <h1 className="text-lg font-bold tracking-tight text-[var(--text-primary)]">
@@ -356,7 +343,7 @@ function AlertsOverview({
         </h1>
       </div>
 
-      {/* Hero metric + refresh */}
+      {/* Hero metric */}
       <div className="px-4 pt-6 pb-4">
         <div className="flex items-baseline justify-between gap-4">
           <div className="flex items-baseline gap-3">
@@ -367,19 +354,7 @@ function AlertsOverview({
               need attention
             </p>
           </div>
-          <div className="flex flex-col items-end gap-1">
-            <button
-              type="button"
-              aria-label="Refresh alerts"
-              onClick={onRefresh}
-              disabled={refreshing}
-              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-[var(--text-muted)] hover:bg-[var(--very-light-gray)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-60"
-            >
-              <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
-              {refreshing ? "Refreshing…" : "Refresh"}
-            </button>
-            <span className="text-[10px] text-[var(--text-muted)]">{lastUpdated}</span>
-          </div>
+          <span className="text-[10px] text-[var(--text-muted)]">{lastUpdated}</span>
         </div>
       </div>
 
@@ -845,110 +820,98 @@ type AlertsScreen =
 function AIAlertsView({ onSendToChat }: { onSendToChat: (player: PlayerAlert) => void }) {
   const [screen, setScreen] = useState<AlertsScreen>({ view: "overview" });
   const [reviewedAlertIds, setReviewedAlertIds] = useState<Set<number>>(new Set());
-  const [refreshing, setRefreshing] = useState(false);
   const lastUpdated = "18:30 GMT · 11 Feb";
 
   const reviewedCount = reviewedAlertIds.size;
-
-  function handleRefresh() {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1200);
-  }
 
   function handleReview(playerId: number) {
     setReviewedAlertIds((prev) => new Set(prev).add(playerId));
   }
 
-  if (screen.view === "detail") {
-    return (
-      <AlertDetailView
-        player={screen.player}
-        onBack={() => setScreen({ view: "player-list", state: screen.player.state })}
-        onSendToChat={onSendToChat}
-        onReview={handleReview}
-      />
-    );
-  }
-
-  if (screen.view === "player-list") {
-    return (
-      <PlayerListView
-        stateKey={screen.state}
-        onBack={() => setScreen({ view: "overview" })}
-        onSelectPlayer={(player) => setScreen({ view: "detail", player })}
-      />
-    );
-  }
-
-  if (screen.view === "squad") {
-    return (
-      <div className="flex flex-1 flex-col min-h-0">
-        <div className="shrink-0 flex items-center gap-3 border-b border-[var(--light-gray)] bg-white px-4 pt-4 pb-3">
-          <button type="button" aria-label="Go back" onClick={() => setScreen({ view: "overview" })} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
-            <ArrowLeft size={20} />
-          </button>
-          <h1 className="text-lg font-bold tracking-tight text-[var(--text-primary)]">Squad</h1>
-        </div>
-        <SquadView
-          onSelectPlayer={(squadPlayer) => {
-            const alerts = PLAYER_ALERTS.filter((a) => a.name === squadPlayer.name)
-              .sort((a, b) => (a.severity === "High" ? -1 : 1) - (b.severity === "High" ? -1 : 1));
-            if (alerts.length > 0) setScreen({ view: "detail", player: alerts[0] });
-          }}
-        />
-      </div>
-    );
-  }
-
-  if (screen.view === "summary") {
-    return (
-      <div className="flex flex-1 flex-col min-h-0">
-        <div className="shrink-0 flex items-center gap-3 border-b border-[var(--light-gray)] bg-white px-4 pt-4 pb-3">
-          <button type="button" aria-label="Go back" onClick={() => setScreen({ view: "overview" })} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
-            <ArrowLeft size={20} />
-          </button>
-          <h1 className="text-lg font-bold tracking-tight text-[var(--text-primary)]">Executive Summary</h1>
-        </div>
-        <ExecutiveSummary />
-      </div>
-    );
-  }
-
-  if (screen.view === "settings") {
-    return (
-      <div className="flex flex-1 flex-col min-h-0">
-        <div className="shrink-0 flex items-center gap-3 border-b border-[var(--light-gray)] bg-white px-4 pt-4 pb-3">
-          <button type="button" aria-label="Go back" onClick={() => setScreen({ view: "overview" })} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
-            <ArrowLeft size={20} />
-          </button>
-          <h1 className="text-lg font-bold tracking-tight text-[var(--text-primary)]">AI Settings</h1>
-        </div>
-        <SettingsView />
-      </div>
-    );
-  }
+  const bottomNav = (
+    <div className="shrink-0 flex items-center justify-center gap-8 border-t border-[var(--light-gray)] bg-[var(--very-light-gray)] py-2.5 px-4">
+      <button type="button" onClick={() => setScreen({ view: "squad" })} className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${screen.view === "squad" ? "bg-white text-[var(--text-primary)]" : "text-[var(--text-muted)] hover:bg-white hover:text-[var(--text-primary)]"}`} aria-label="Squad">
+        <Users size={20} />
+      </button>
+      <button type="button" onClick={() => setScreen({ view: "summary" })} className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${screen.view === "summary" ? "bg-white text-[var(--text-primary)]" : "text-[var(--text-muted)] hover:bg-white hover:text-[var(--text-primary)]"}`} aria-label="Summary">
+        <Zap size={20} />
+      </button>
+      <button type="button" onClick={() => setScreen({ view: "settings" })} className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${screen.view === "settings" ? "bg-white text-[var(--text-primary)]" : "text-[var(--text-muted)] hover:bg-white hover:text-[var(--text-primary)]"}`} aria-label="Settings">
+        <Settings size={20} />
+      </button>
+    </div>
+  );
 
   return (
     <div className="flex flex-1 flex-col min-h-0">
-      <AlertsOverview
-        onSelectState={(state) => setScreen({ view: "player-list", state })}
-        reviewedCount={reviewedCount}
-        refreshing={refreshing}
-        onRefresh={handleRefresh}
-        lastUpdated={lastUpdated}
-      />
-      {/* Quick access — compact icons */}
-      <div className="shrink-0 flex items-center justify-center gap-8 border-t border-[var(--light-gray)] bg-[var(--very-light-gray)] py-2.5 px-4">
-        <button type="button" onClick={() => setScreen({ view: "squad" })} className="flex h-10 w-10 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-white hover:text-[var(--text-primary)] transition-colors" aria-label="Squad">
-          <Users size={20} />
-        </button>
-        <button type="button" onClick={() => setScreen({ view: "summary" })} className="flex h-10 w-10 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-white hover:text-[var(--text-primary)] transition-colors" aria-label="Summary">
-          <Zap size={20} />
-        </button>
-        <button type="button" onClick={() => setScreen({ view: "settings" })} className="flex h-10 w-10 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-white hover:text-[var(--text-primary)] transition-colors" aria-label="Settings">
-          <Settings size={20} />
-        </button>
-      </div>
+      {screen.view === "detail" && (
+        <AlertDetailView
+          player={screen.player}
+          onBack={() => setScreen({ view: "player-list", state: screen.player.state })}
+          onSendToChat={onSendToChat}
+          onReview={handleReview}
+        />
+      )}
+      {screen.view === "player-list" && (
+        <PlayerListView
+          stateKey={screen.state}
+          onBack={() => setScreen({ view: "overview" })}
+          onSelectPlayer={(player) => setScreen({ view: "detail", player })}
+        />
+      )}
+      {screen.view === "squad" && (
+        <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
+          <div className="shrink-0 flex items-center gap-3 border-b border-[var(--light-gray)] bg-white px-4 pt-4 pb-3">
+            <button type="button" aria-label="Go back" onClick={() => setScreen({ view: "overview" })} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
+              <ArrowLeft size={20} />
+            </button>
+            <h1 className="text-lg font-bold tracking-tight text-[var(--text-primary)]">Squad</h1>
+          </div>
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <SquadView
+              onSelectPlayer={(squadPlayer) => {
+                const alerts = PLAYER_ALERTS.filter((a) => a.name === squadPlayer.name)
+                  .sort((a, b) => (a.severity === "High" ? -1 : 1) - (b.severity === "High" ? -1 : 1));
+                if (alerts.length > 0) setScreen({ view: "detail", player: alerts[0] });
+              }}
+            />
+          </div>
+        </div>
+      )}
+      {screen.view === "summary" && (
+        <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
+          <div className="shrink-0 flex items-center gap-3 border-b border-[var(--light-gray)] bg-white px-4 pt-4 pb-3">
+            <button type="button" aria-label="Go back" onClick={() => setScreen({ view: "overview" })} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
+              <ArrowLeft size={20} />
+            </button>
+            <h1 className="text-lg font-bold tracking-tight text-[var(--text-primary)]">Executive Summary</h1>
+          </div>
+          <div className="flex-1 min-h-0 overflow-auto">
+            <ExecutiveSummary />
+          </div>
+        </div>
+      )}
+      {screen.view === "settings" && (
+        <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
+          <div className="shrink-0 flex items-center gap-3 border-b border-[var(--light-gray)] bg-white px-4 pt-4 pb-3">
+            <button type="button" aria-label="Go back" onClick={() => setScreen({ view: "overview" })} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
+              <ArrowLeft size={20} />
+            </button>
+            <h1 className="text-lg font-bold tracking-tight text-[var(--text-primary)]">AI Settings</h1>
+          </div>
+          <div className="flex-1 min-h-0 overflow-auto">
+            <SettingsView />
+          </div>
+        </div>
+      )}
+      {screen.view === "overview" && (
+        <AlertsOverview
+          onSelectState={(state) => setScreen({ view: "player-list", state })}
+          reviewedCount={reviewedCount}
+          lastUpdated={lastUpdated}
+        />
+      )}
+      {bottomNav}
     </div>
   );
 }
@@ -957,15 +920,10 @@ function AIAlertsView({ onSendToChat }: { onSendToChat: (player: PlayerAlert) =>
 
 function SquadView({ onSelectPlayer }: { onSelectPlayer?: (player: SquadPlayer) => void }) {
   const [filterGroup, setFilterGroup] = useState<"All" | "Forward" | "Back" | "Halfback">("All");
-  const [filterPosition, setFilterPosition] = useState<string>("All");
 
-  const positions = ["All", ...Array.from(new Set(SQUAD_PLAYERS.map((p) => p.position)))];
-  const filteredByGroup = filterGroup === "All"
+  const filtered = filterGroup === "All"
     ? SQUAD_PLAYERS
     : SQUAD_PLAYERS.filter((p) => p.group === filterGroup);
-  const filtered = filterPosition === "All"
-    ? filteredByGroup
-    : filteredByGroup.filter((p) => p.position === filterPosition);
 
   function getPlayerAlerts(name: string) {
     return PLAYER_ALERTS.filter((a) => a.name === name);
@@ -988,7 +946,7 @@ function SquadView({ onSelectPlayer }: { onSelectPlayer?: (player: SquadPlayer) 
         <p className="mt-1 text-xs text-[var(--text-muted)]">{PLAYER_ALERTS.length} active alerts</p>
       </div>
 
-      <div className="shrink-0 space-y-2 px-4 py-2">
+      <div className="shrink-0 px-4 py-2">
         <div className="flex gap-2 overflow-x-auto scrollbar-hide">
           {(["All", "Forward", "Back", "Halfback"] as const).map((g) => (
             <button
@@ -1002,22 +960,6 @@ function SquadView({ onSelectPlayer }: { onSelectPlayer?: (player: SquadPlayer) 
               }`}
             >
               {g === "All" ? `All (${SQUAD_PLAYERS.length})` : `${g}s`}
-            </button>
-          ))}
-        </div>
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-          {positions.map((pos) => (
-            <button
-              key={pos}
-              type="button"
-              onClick={() => setFilterPosition(pos)}
-              className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors ${
-                filterPosition === pos
-                  ? "bg-[var(--very-light-green)] text-[var(--light-green)]"
-                  : "bg-[var(--very-light-gray)] text-[var(--medium-gray)] hover:bg-[var(--light-gray)]"
-              }`}
-            >
-              {pos}
             </button>
           ))}
         </div>
@@ -1038,7 +980,7 @@ function SquadView({ onSelectPlayer }: { onSelectPlayer?: (player: SquadPlayer) 
               key={player.id}
               type="button"
               onClick={() => onSelectPlayer?.(player)}
-              className="flex w-full items-center gap-3 border-b border-[var(--light-gray)] px-4 py-3 text-left transition-colors hover:bg-[var(--very-light-gray)] active:bg-[var(--light-gray)] animate-fade-up"
+              className="flex h-[72px] w-full items-center gap-3 border-b border-[var(--light-gray)] px-4 text-left transition-colors hover:bg-[var(--very-light-gray)] active:bg-[var(--light-gray)] animate-fade-up"
               style={{ animationDelay: `${i * 40}ms` }}
             >
               <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--very-light-green)] text-sm font-semibold text-[var(--light-green)]">
@@ -1046,12 +988,12 @@ function SquadView({ onSelectPlayer }: { onSelectPlayer?: (player: SquadPlayer) 
                 <span className={`absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white ${getRiskColor(player.name)}`} />
               </div>
 
-              <div className="flex-1 min-w-0">
+              <div className="flex min-w-0 flex-1 flex-col justify-center">
                 <p className="text-[15px] font-semibold text-[var(--text-primary)] truncate">{player.name}</p>
                 <p className="text-xs text-[var(--text-muted)]">{player.position} · {player.group}</p>
               </div>
 
-              <div className="flex flex-col items-end gap-1 shrink-0">
+              <div className="flex shrink-0 flex-col items-end justify-center gap-0.5">
                 <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
                   player.availability === "Available" ? "bg-[var(--very-light-green)] text-[var(--light-green)]"
                     : player.availability === "Limited" ? "bg-[#fffbeb] text-[#d97706]"
@@ -1070,7 +1012,7 @@ function SquadView({ onSelectPlayer }: { onSelectPlayer?: (player: SquadPlayer) 
                   <span className="text-[11px] text-[var(--text-muted)]">{alerts.length} alert{alerts.length > 1 ? "s" : ""}</span>
                 )}
               </div>
-              {alerts.length > 0 && <ChevronRight size={16} className="shrink-0 text-[var(--text-muted)]" />}
+              <ChevronRight size={16} className="shrink-0 text-[var(--text-muted)]" />
             </button>
           );
         })
