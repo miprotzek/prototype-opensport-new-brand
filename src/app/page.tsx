@@ -61,8 +61,8 @@ function useDragScroll() {
 
 function MenuIcon() {
   return (
-    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--brand-primary)]">
-      <MenuFeather size={18} color="white" />
+    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#69D55D]">
+      <MenuFeather size={18} color="#1E3C20" />
     </div>
   );
 }
@@ -151,10 +151,10 @@ function InsightCardItem({ card, onSendToChat, onFilterBy }: { card: InsightCard
           {card.updated}
         </p>
         <div className="flex gap-2.5 items-center">
-          <button type="button" aria-label="More info" className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[var(--very-light-gray)] text-[var(--text-primary)] hover:bg-[var(--light-gray)] hover:scale-105 active:scale-95 transition-all duration-150">
+          <button type="button" aria-label="More info" className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[var(--very-light-gray)] text-[#247933] hover:bg-[var(--light-gray)] hover:scale-105 active:scale-95 transition-all duration-150">
             <Info size={18} />
           </button>
-          <button type="button" aria-label="Send to AI chat" onClick={() => onSendToChat(card)} className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[var(--very-light-gray)] text-[var(--text-primary)] hover:bg-[var(--light-gray)] hover:scale-105 active:scale-95 transition-all duration-150">
+          <button type="button" aria-label="Send to AI chat" onClick={() => onSendToChat(card)} className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[var(--very-light-gray)] text-[#247933] hover:bg-[var(--light-gray)] hover:scale-105 active:scale-95 transition-all duration-150">
             <Zap size={18} />
           </button>
           <button
@@ -162,7 +162,7 @@ function InsightCardItem({ card, onSendToChat, onFilterBy }: { card: InsightCard
             aria-label="Copy"
             onClick={handleCopy}
             className={`flex h-8 w-8 items-center justify-center rounded-2xl transition-all duration-150 ${
-              copied ? "bg-[var(--very-light-green)] text-[var(--light-green)] animate-pop-in" : "bg-[var(--very-light-gray)] text-[var(--text-primary)] hover:bg-[var(--light-gray)] hover:scale-105 active:scale-95"
+              copied ? "bg-[var(--very-light-green)] text-[var(--light-green)] animate-pop-in" : "bg-[var(--very-light-gray)] text-[#247933] hover:bg-[var(--light-gray)] hover:scale-105 active:scale-95"
             }`}
           >
             {copied ? <Check size={16} /> : <Copy size={18} />}
@@ -788,7 +788,7 @@ export default function InsightsPage() {
                   AI alerts
                 </span>
               </div>
-              <div className={`h-[2px] w-full ${activeTab === "alerts" ? "bg-[var(--light-green)]" : "bg-transparent"}`} />
+              <div className={`h-[2px] w-full ${activeTab === "alerts" ? "bg-[#69D55D]" : "bg-transparent"}`} />
             </button>
             <button
               type="button"
@@ -800,7 +800,7 @@ export default function InsightsPage() {
                   AI chat
                 </span>
               </div>
-              <div className={`h-[2px] w-full ${activeTab === "chat" ? "bg-[var(--light-green)]" : "bg-transparent"}`} />
+              <div className={`h-[2px] w-full ${activeTab === "chat" ? "bg-[#69D55D]" : "bg-transparent"}`} />
             </button>
           </div>
 
