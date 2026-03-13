@@ -284,14 +284,12 @@ const DEFAULT_AI_RESPONSE =
 
 function AlertsOverview({
   onSelectState,
-  onStartReview,
   reviewedCount,
   refreshing,
   onRefresh,
   lastUpdated,
 }: {
   onSelectState: (state: AlertState) => void;
-  onStartReview: () => void;
   reviewedCount: number;
   refreshing: boolean;
   onRefresh: () => void;
@@ -299,7 +297,6 @@ function AlertsOverview({
 }) {
   const totalPlayers = new Set(PLAYER_ALERTS.map((a) => a.name)).size;
   const totalAlerts = PLAYER_ALERTS.length;
-  const firstStateWithAlerts = ALERT_STATES.find((s) => PLAYER_ALERTS.some((a) => a.state === s.key));
 
   const hasAlerts = totalAlerts > 0;
 
@@ -402,32 +399,22 @@ function AlertsOverview({
             })}
           </div>
 
-          {/* Today's summary — progress + CTA */}
+          {/* Today's summary */}
           <div className="mx-4 mt-4 mb-4 rounded-2xl border border-[var(--light-gray)] bg-[var(--very-light-gray)] p-4 animate-fade-up" style={{ animationDelay: "300ms" }}>
-            <p className="text-[10px] uppercase tracking-wider font-medium text-[var(--text-muted)] mb-3">
-              Today&apos;s progress
-            </p>
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--light-gray)]">
-                  <div
-                    className="h-full rounded-full bg-[var(--light-green)] transition-all duration-300"
-                    style={{ width: `${totalAlerts > 0 ? (reviewedCount / totalAlerts) * 100 : 0}%` }}
-                  />
-                </div>
-                <p className="mt-1.5 text-sm font-medium text-[var(--text-primary)]">
-                  {reviewedCount} of {totalAlerts} reviewed
-                </p>
+            <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">Today&apos;s summary</p>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-[#dc2626]" />
+                <span className="text-sm text-[var(--medium-gray)]">{totalAlerts} new</span>
               </div>
-              {firstStateWithAlerts && (
-                <button
-                  type="button"
-                  onClick={onStartReview}
-                  className="shrink-0 rounded-xl bg-[var(--light-green)] px-4 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98]"
-                >
-                  Start review
-                </button>
-              )}
+              <div className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-[#d97706]" />
+                <span className="text-sm text-[var(--medium-gray)]">{totalAlerts} unresolved</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-[var(--light-green)]" />
+                <span className="text-sm text-[var(--medium-gray)]">{reviewedCount} reviewed</span>
+              </div>
             </div>
           </div>
         </>
@@ -798,15 +785,10 @@ function AIAlertsView({ onSendToChat }: { onSendToChat: (player: PlayerAlert) =>
   const lastUpdated = "18:30 GMT · 11 Feb";
 
   const reviewedCount = reviewedAlertIds.size;
-  const firstStateWithAlerts = ALERT_STATES.find((s) => PLAYER_ALERTS.some((a) => a.state === s.key));
 
   function handleRefresh() {
     setRefreshing(true);
     setTimeout(() => setRefreshing(false), 1200);
-  }
-
-  function handleStartReview() {
-    if (firstStateWithAlerts) setScreen({ view: "player-list", state: firstStateWithAlerts.key });
   }
 
   function handleReview(playerId: number) {
@@ -880,7 +862,6 @@ function AIAlertsView({ onSendToChat }: { onSendToChat: (player: PlayerAlert) =>
     <div className="flex flex-1 flex-col min-h-0">
       <AlertsOverview
         onSelectState={(state) => setScreen({ view: "player-list", state })}
-        onStartReview={handleStartReview}
         reviewedCount={reviewedCount}
         refreshing={refreshing}
         onRefresh={handleRefresh}
@@ -1502,7 +1483,7 @@ function AIChatView({
             onMouseUp={dragScroll.onMouseUp}
             onMouseLeave={dragScroll.onMouseLeave}
             onClickCapture={dragScroll.onClickCapture}
-            className="flex cursor-grab gap-2 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory animate-slide-down"
+            className="flex cursor-grab gap-2 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory animate-slide-down leading-[18px]"
           >
             {SUGGESTIONS.map((text, i) => (
               <button
@@ -1512,7 +1493,7 @@ function AIChatView({
                 style={{ animationDelay: `${i * 80}ms` }}
                 onClick={() => { sendMessage(text); setShowSuggestions(false); }}
               >
-                <span className="text-sm font-medium leading-[18px] text-[var(--brand-primary)]">
+                <span className="text-[13px] font-medium leading-[18px] text-[var(--brand-primary)]">
                   {text}
                 </span>
               </button>
@@ -1532,7 +1513,7 @@ function AIChatView({
             />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mt-0 mb-0">
             <div className="flex flex-1 flex-wrap items-center gap-2">
               <span className="rounded-2xl bg-[var(--very-light-green)] px-1.5 py-[3px] text-sm font-medium tracking-[0.14px] text-[var(--medium-gray)]">
                 GPS data
