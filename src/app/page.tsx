@@ -76,8 +76,8 @@ function useDragScroll() {
 
 function MenuIcon() {
   return (
-    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#69D55D]">
-      <MenuFeather size={18} color="#1E3C20" />
+    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#69D55D]">
+      <MenuFeather size={20} color="#1E3C20" />
     </div>
   );
 }
@@ -225,8 +225,8 @@ const ALERT_STATES: AlertStateConfig[] = [
     rules: ["four_week_load_change", "four_week_hsr_load_increase", "sprint_exposure_trend_28d", "weekly_max_vs_28day_max", "weekly_load_vs_28day_average", "seasonal_max_distance_exceeded"],
   },
   {
-    key: "performance-signal", label: "Performance Signal", color: "text-[#247933]", dotColor: "bg-[#69D55D]",
-    bgColor: "bg-[#f0fdf4]", icon: TrendingUp,
+    key: "performance-signal", label: "Performance Signal", color: "text-[#2563eb]", dotColor: "bg-[#3b82f6]",
+    bgColor: "bg-[#eff6ff]", icon: TrendingUp,
     summary: "Performance changes detected during training or match play.",
     rules: ["late_game_speed_drop", "low_work_rate", "positional_output_outlier", "load_trend_decreasing", "consistency_drop", "match_average_vs_baseline", "season_max_achieved"],
   },
@@ -284,30 +284,31 @@ const DEFAULT_AI_RESPONSE =
 function AlertsOverview({ onSelectState }: { onSelectState: (state: AlertState) => void }) {
   const totalPlayers = new Set(PLAYER_ALERTS.map((a) => a.name)).size;
   const [refreshing, setRefreshing] = useState(false);
-  const [lastUpdated] = useState(() => {
-    const now = new Date();
-    return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-  });
+  const serverRefreshTime = "18:30 GMT · 11 Feb";
 
   function handleRefresh() {
     setRefreshing(true);
     setTimeout(() => setRefreshing(false), 1200);
   }
 
+  const statCounts = ALERT_STATES.map((s) => ({
+    ...s,
+    count: PLAYER_ALERTS.filter((a) => a.state === s.key).length,
+  }));
+
   return (
     <div className="flex-1 overflow-y-auto">
-      {/* T1: Updated timestamp + T10: Refresh indicator */}
-      <div className="px-4 pt-5 pb-3">
+      <div className="px-4 pt-5 pb-2">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-[var(--text-primary)]">Alerts overview</h2>
+          <h2 className="text-xl font-bold text-[var(--text-primary)]">Performance Overview</h2>
           <button
             type="button"
             aria-label="Refresh alerts"
             onClick={handleRefresh}
             className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
           >
-            <RefreshCw size={12} className={refreshing ? "animate-spin" : ""} />
-            Updated {lastUpdated}
+            <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+            {serverRefreshTime}
           </button>
         </div>
         <p className="mt-1 text-sm text-[var(--text-muted)]">
@@ -315,14 +316,34 @@ function AlertsOverview({ onSelectState }: { onSelectState: (state: AlertState) 
         </p>
       </div>
 
+      {/* Compact stat bar — quick triage counts */}
+      <div className="flex gap-2 px-4 pb-4 pt-1 animate-fade-up">
+        {statCounts.map((s) => (
+          <button
+            key={s.key}
+            type="button"
+            onClick={() => onSelectState(s.key)}
+            className="flex flex-1 flex-col items-center gap-0.5 rounded-xl border border-[var(--light-gray)] bg-white py-2.5 transition-all hover:shadow-md active:scale-[0.97]"
+          >
+            <div className="flex items-center gap-1.5">
+              <span className={`h-2 w-2 rounded-full ${s.dotColor}`} />
+              <span className="text-xl font-bold text-[var(--text-primary)]">{s.count}</span>
+            </div>
+            <span className="text-[11px] font-medium text-[var(--text-muted)]">{s.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* State cards */}
       <div className="flex flex-col gap-3 px-4 pb-4">
         {ALERT_STATES.map((stateConfig, i) => {
-          const players = PLAYER_ALERTS.filter((a) => a.state === stateConfig.key);
+          const players = [...PLAYER_ALERTS.filter((a) => a.state === stateConfig.key)]
+            .sort((a, b) => (a.severity === "High" ? -1 : 1) - (b.severity === "High" ? -1 : 1));
           if (players.length === 0) return null;
           const highCount = players.filter((p) => p.severity === "High").length;
           const medCount = players.filter((p) => p.severity === "Medium").length;
           const Icon = stateConfig.icon;
-          const topPlayer = players.sort((a, b) => (a.severity === "High" ? -1 : 1) - (b.severity === "High" ? -1 : 1))[0];
+          const topPlayer = players[0];
 
           return (
             <button
@@ -334,7 +355,7 @@ function AlertsOverview({ onSelectState }: { onSelectState: (state: AlertState) 
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${stateConfig.bgColor}`}>
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${stateConfig.bgColor}`}>
                     <Icon size={18} className={stateConfig.color} />
                   </div>
                   <div>
@@ -348,42 +369,43 @@ function AlertsOverview({ onSelectState }: { onSelectState: (state: AlertState) 
                 <ChevronRight size={18} className="text-[var(--text-muted)]" />
               </div>
 
-              <p className="text-sm leading-5 text-[var(--medium-gray)]">{stateConfig.summary}</p>
-
-              {/* T2: Top player preview */}
+              {/* Top player preview with action */}
               {topPlayer && (
-                <div className="flex items-center gap-2 rounded-xl bg-[var(--very-light-gray)] px-3 py-2">
-                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--very-light-green)] text-[10px] font-semibold text-[var(--light-green)]">
-                    {topPlayer.name.split(" ").map((n) => n[0]).join("")}
+                <div className="flex flex-col gap-2 rounded-xl bg-[var(--very-light-gray)] px-3 py-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--very-light-green)] text-[11px] font-semibold text-[var(--light-green)]">
+                      {topPlayer.name.split(" ").map((n) => n[0]).join("")}
+                    </div>
+                    <span className="text-sm font-semibold text-[var(--text-primary)]">{topPlayer.name}</span>
+                    <span className={`ml-auto shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                      topPlayer.severity === "High" ? "bg-[#fef2f2] text-[#c23f3f]" : "bg-[#fffbeb] text-[#b45309]"
+                    }`}>
+                      {topPlayer.severity}
+                    </span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-xs font-semibold text-[var(--text-primary)]">{topPlayer.name}</span>
-                    <span className="text-xs text-[var(--text-muted)]"> — {topPlayer.shortReason}</span>
-                  </div>
+                  <p className="text-xs text-[var(--medium-gray)]">
+                    {topPlayer.shortReason} · {topPlayer.metricSnippet.split("·")[0].trim()}
+                  </p>
+                  <p className="text-xs font-medium text-[var(--light-green)]">
+                    Action: {topPlayer.recommendations[0]}
+                  </p>
                   {players.length > 1 && (
-                    <span className="shrink-0 text-xs text-[var(--text-muted)]">+{players.length - 1} more</span>
+                    <p className="text-[11px] text-[var(--text-muted)]">+{players.length - 1} more athlete{players.length - 1 > 1 ? "s" : ""}</p>
                   )}
                 </div>
               )}
 
-              <div className="flex items-center justify-between">
-                {/* Severity badges */}
-                <div className="flex items-center gap-2">
-                  {highCount > 0 && (
-                    <span className="flex items-center gap-1 rounded-full bg-[#fef2f2] px-2 py-0.5 text-xs font-medium text-[#c23f3f]">
-                      {highCount} high
-                    </span>
-                  )}
-                  {medCount > 0 && (
-                    <span className="flex items-center gap-1 rounded-full bg-[#fffbeb] px-2 py-0.5 text-xs font-medium text-[#b45309]">
-                      {medCount} medium
-                    </span>
-                  )}
-                </div>
-                {/* T9: Rule count */}
-                <span className="text-[10px] text-[var(--text-muted)]">
-                  Powered by {stateConfig.rules.length} rules
-                </span>
+              <div className="flex items-center gap-2">
+                {highCount > 0 && (
+                  <span className="flex items-center gap-1 rounded-full bg-[#fef2f2] px-2 py-0.5 text-xs font-medium text-[#c23f3f]">
+                    {highCount} high
+                  </span>
+                )}
+                {medCount > 0 && (
+                  <span className="flex items-center gap-1 rounded-full bg-[#fffbeb] px-2 py-0.5 text-xs font-medium text-[#b45309]">
+                    {medCount} medium
+                  </span>
+                )}
               </div>
             </button>
           );
@@ -396,7 +418,7 @@ function AlertsOverview({ onSelectState }: { onSelectState: (state: AlertState) 
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-[#c23f3f]" />
-            <span className="text-sm text-[var(--medium-gray)]">{PLAYER_ALERTS.length} new alerts</span>
+            <span className="text-sm text-[var(--medium-gray)]">{PLAYER_ALERTS.length} new</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-[#e8b923]" />
@@ -439,7 +461,7 @@ function PlayerListView({
     <div className="flex flex-1 flex-col min-h-0">
       {/* Header */}
       <div className="shrink-0 flex items-center gap-3 px-4 pt-4 pb-2">
-        <button type="button" aria-label="Go back" onClick={onBack} className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
+        <button type="button" aria-label="Go back" onClick={onBack} className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
           <ArrowLeft size={20} />
         </button>
         <div>
@@ -458,7 +480,7 @@ function PlayerListView({
             key={s}
             type="button"
             onClick={() => setSortBy(s)}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+            className={`rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors ${
               sortBy === s
                 ? "bg-[var(--very-light-green)] text-[var(--light-green)]"
                 : "bg-[var(--very-light-gray)] text-[var(--medium-gray)] hover:bg-[var(--light-gray)]"
@@ -539,7 +561,7 @@ function AlertDetailView({
     <div className="flex flex-1 flex-col min-h-0">
       {/* Header */}
       <div className="shrink-0 flex items-center gap-3 px-4 pt-4 pb-3 border-b border-[var(--light-gray)]">
-        <button type="button" aria-label="Go back" onClick={onBack} className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
+        <button type="button" aria-label="Go back" onClick={onBack} className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
           <ArrowLeft size={20} />
         </button>
         <div>
@@ -592,7 +614,7 @@ function AlertDetailView({
                   key={w}
                   type="button"
                   onClick={() => setTrendWindow(w)}
-                  className={`px-2.5 py-1 text-xs font-medium transition-colors ${
+                  className={`px-3 py-2 text-[13px] font-medium transition-colors ${
                     trendWindow === w
                       ? "bg-[var(--very-light-green)] text-[var(--light-green)]"
                       : "bg-white text-[var(--text-muted)] hover:bg-[var(--very-light-gray)]"
@@ -620,7 +642,7 @@ function AlertDetailView({
           <ul className="mt-2 flex flex-col gap-1.5">
             {player.recommendations.map((r) => (
               <li key={r} className="flex items-start gap-2 text-sm text-[var(--brand-primary)]">
-                <Check size={14} className="shrink-0 mt-0.5 text-[var(--light-green)]" />
+                <Check size={16} className="shrink-0 mt-0.5 text-[var(--light-green)]" />
                 {r}
               </li>
             ))}
@@ -689,7 +711,7 @@ function AlertDetailView({
                   : "border-[var(--light-gray)] text-[var(--medium-gray)] hover:bg-[var(--very-light-gray)]"
               }`}
             >
-              <CheckCircle size={14} />
+              <CheckCircle size={16} />
               Mark expected
             </button>
             {/* T5: Override with note requirement */}
@@ -704,7 +726,7 @@ function AlertDetailView({
                     : "border-[var(--light-gray)] text-[var(--medium-gray)] hover:bg-[var(--very-light-gray)]"
               }`}
             >
-              <XCircle size={14} />
+              <XCircle size={16} />
               {overrideConfirmed ? "Override logged" : "Override"}
             </button>
           </div>
@@ -734,7 +756,7 @@ function AlertDetailView({
           )}
           {overrideConfirmed && (
             <div className="mt-2 flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
-              <Clock size={12} />
+              <Clock size={16} />
               Override logged at {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} — stored in audit log
             </div>
           )}
@@ -781,7 +803,7 @@ function AIAlertsView({ onSendToChat }: { onSendToChat: (player: PlayerAlert) =>
     return (
       <div className="flex flex-1 flex-col min-h-0">
         <div className="shrink-0 flex items-center gap-3 px-4 pt-4 pb-2">
-          <button type="button" aria-label="Go back" onClick={() => setScreen({ view: "overview" })} className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
+          <button type="button" aria-label="Go back" onClick={() => setScreen({ view: "overview" })} className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
             <ArrowLeft size={20} />
           </button>
         </div>
@@ -794,7 +816,7 @@ function AIAlertsView({ onSendToChat }: { onSendToChat: (player: PlayerAlert) =>
     return (
       <div className="flex flex-1 flex-col min-h-0">
         <div className="shrink-0 flex items-center gap-3 px-4 pt-4 pb-2">
-          <button type="button" aria-label="Go back" onClick={() => setScreen({ view: "overview" })} className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
+          <button type="button" aria-label="Go back" onClick={() => setScreen({ view: "overview" })} className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
             <ArrowLeft size={20} />
           </button>
         </div>
@@ -807,7 +829,7 @@ function AIAlertsView({ onSendToChat }: { onSendToChat: (player: PlayerAlert) =>
     return (
       <div className="flex flex-1 flex-col min-h-0">
         <div className="shrink-0 flex items-center gap-3 px-4 pt-4 pb-2">
-          <button type="button" aria-label="Go back" onClick={() => setScreen({ view: "overview" })} className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
+          <button type="button" aria-label="Go back" onClick={() => setScreen({ view: "overview" })} className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
             <ArrowLeft size={20} />
           </button>
         </div>
@@ -821,17 +843,17 @@ function AIAlertsView({ onSendToChat }: { onSendToChat: (player: PlayerAlert) =>
       <AlertsOverview onSelectState={(state) => setScreen({ view: "player-list", state })} />
       {/* Quick access bar for new screens */}
       <div className="shrink-0 flex items-center justify-around border-t border-[var(--light-gray)] bg-white py-2 px-4">
-        <button type="button" onClick={() => setScreen({ view: "squad" })} className="flex flex-col items-center gap-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
-          <Users size={18} />
-          <span className="text-[10px] font-medium">Squad</span>
+        <button type="button" onClick={() => setScreen({ view: "squad" })} className="flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
+          <Users size={20} />
+          <span className="text-[11px] font-medium">Squad</span>
         </button>
-        <button type="button" onClick={() => setScreen({ view: "summary" })} className="flex flex-col items-center gap-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
-          <Zap size={18} />
-          <span className="text-[10px] font-medium">Summary</span>
+        <button type="button" onClick={() => setScreen({ view: "summary" })} className="flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
+          <Zap size={20} />
+          <span className="text-[11px] font-medium">Summary</span>
         </button>
-        <button type="button" onClick={() => setScreen({ view: "settings" })} className="flex flex-col items-center gap-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
-          <Settings size={18} />
-          <span className="text-[10px] font-medium">Settings</span>
+        <button type="button" onClick={() => setScreen({ view: "settings" })} className="flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
+          <Settings size={20} />
+          <span className="text-[11px] font-medium">Settings</span>
         </button>
       </div>
     </div>
@@ -871,7 +893,7 @@ function SquadView() {
             key={g}
             type="button"
             onClick={() => setFilterGroup(g)}
-            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+            className={`shrink-0 rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors ${
               filterGroup === g
                 ? "bg-[var(--very-light-green)] text-[var(--light-green)]"
                 : "bg-[var(--very-light-gray)] text-[var(--medium-gray)] hover:bg-[var(--light-gray)]"
@@ -902,14 +924,14 @@ function SquadView() {
               </div>
 
               <div className="flex flex-col items-end gap-1 shrink-0">
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
                   player.availability === "Available" ? "bg-[#f0fdf4] text-[#247933]"
                     : player.availability === "Limited" ? "bg-[#fffbeb] text-[#b45309]"
                     : "bg-[#fef2f2] text-[#c23f3f]"
                 }`}>
                   {player.availability}
                 </span>
-                <span className={`text-[10px] font-medium ${
+                <span className={`text-[11px] font-medium ${
                   player.loadStatus === "Normal" ? "text-[var(--text-muted)]"
                     : player.loadStatus === "High" ? "text-[#c23f3f]"
                     : "text-[#b45309]"
@@ -917,7 +939,7 @@ function SquadView() {
                   Load: {player.loadStatus}
                 </span>
                 {alerts.length > 0 && (
-                  <span className="text-[10px] text-[var(--text-muted)]">{alerts.length} alert{alerts.length > 1 ? "s" : ""}</span>
+                  <span className="text-[11px] text-[var(--text-muted)]">{alerts.length} alert{alerts.length > 1 ? "s" : ""}</span>
                 )}
               </div>
             </div>
@@ -971,14 +993,14 @@ function ExecutiveSummary() {
         <div className="flex flex-col gap-2">
           {topRisks.map((alert, i) => (
             <div key={alert.id} className="flex items-center gap-3 rounded-xl border border-[var(--light-gray)] bg-white p-3">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#fef2f2] text-xs font-bold text-[#c23f3f]">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#fef2f2] text-xs font-bold text-[#c23f3f]">
                 {i + 1}
               </span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{alert.name}</p>
                 <p className="text-xs text-[var(--text-muted)] truncate">{alert.shortReason}</p>
               </div>
-              <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+              <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
                 alert.severity === "High" ? "bg-[#fef2f2] text-[#c23f3f]" : "bg-[#fffbeb] text-[#b45309]"
               }`}>
                 {alert.severity}
@@ -997,7 +1019,7 @@ function ExecutiveSummary() {
             return (
               <div key={s.key} className={`rounded-xl ${s.bgColor} p-3 text-center`}>
                 <p className="text-lg font-bold text-[var(--text-primary)]">{count}</p>
-                <p className="text-[10px] font-medium text-[var(--text-muted)]">{s.label}</p>
+                <p className="text-[11px] font-medium text-[var(--text-muted)]">{s.label}</p>
               </div>
             );
           })}
@@ -1009,15 +1031,15 @@ function ExecutiveSummary() {
         <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">Suggested focus areas</p>
         <ul className="flex flex-col gap-2">
           <li className="flex items-start gap-2 text-sm text-[var(--medium-gray)]">
-            <AlertTriangle size={14} className="shrink-0 mt-0.5 text-[#c23f3f]" />
+            <AlertTriangle size={16} className="shrink-0 mt-0.5 text-[#c23f3f]" />
             Review At Risk players before next training session
           </li>
           <li className="flex items-start gap-2 text-sm text-[var(--medium-gray)]">
-            <Activity size={14} className="shrink-0 mt-0.5 text-[#b45309]" />
+            <Activity size={16} className="shrink-0 mt-0.5 text-[#b45309]" />
             Address load imbalance trends in forwards
           </li>
           <li className="flex items-start gap-2 text-sm text-[var(--medium-gray)]">
-            <TrendingUp size={14} className="shrink-0 mt-0.5 text-[#247933]" />
+            <TrendingUp size={16} className="shrink-0 mt-0.5 text-[#2563eb]" />
             Monitor late-game speed patterns across squad
           </li>
         </ul>
@@ -1030,7 +1052,7 @@ function ExecutiveSummary() {
           onClick={() => setDismissed(true)}
           className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[var(--light-gray)] bg-white py-3 text-sm font-medium text-[var(--text-primary)] transition-all hover:bg-[var(--very-light-gray)] active:scale-[0.98]"
         >
-          <X size={14} />
+          <X size={16} />
           Dismiss
         </button>
         <button
@@ -1038,7 +1060,7 @@ function ExecutiveSummary() {
           onClick={() => navigator.clipboard?.writeText(summaryText)}
           className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] py-3 text-sm font-medium text-white transition-all hover:opacity-90 active:scale-[0.98]"
         >
-          <Share2 size={14} />
+          <Share2 size={16} />
           Share
         </button>
       </div>
@@ -1081,7 +1103,7 @@ function SettingsView() {
       {/* Sensitivity selector */}
       <div className="mx-4 rounded-2xl border border-[var(--light-gray)] bg-white p-4 animate-fade-up">
         <div className="flex items-center gap-2 mb-3">
-          <Sliders size={14} className="text-[var(--text-primary)]" />
+          <Sliders size={16} className="text-[var(--text-primary)]" />
           <p className="text-sm font-semibold text-[var(--text-primary)]">Detection sensitivity</p>
         </div>
         <div className="flex rounded-xl border border-[var(--light-gray)] overflow-hidden">
@@ -1090,7 +1112,7 @@ function SettingsView() {
               key={mode}
               type="button"
               onClick={() => setSensitivity(mode)}
-              className={`flex-1 py-2.5 text-xs font-medium transition-colors ${
+              className={`flex-1 py-3 text-[13px] font-medium transition-colors ${
                 sensitivity === mode
                   ? "bg-[var(--very-light-green)] text-[var(--light-green)]"
                   : "bg-white text-[var(--medium-gray)] hover:bg-[var(--very-light-gray)]"
@@ -1110,7 +1132,7 @@ function SettingsView() {
       {/* AI Modules */}
       <div className="px-4 mt-4 animate-fade-up" style={{ animationDelay: "100ms" }}>
         <div className="flex items-center gap-2 mb-3">
-          <Shield size={14} className="text-[var(--text-primary)]" />
+          <Shield size={16} className="text-[var(--text-primary)]" />
           <p className="text-sm font-semibold text-[var(--text-primary)]">AI modules</p>
         </div>
         <div className="flex flex-col gap-2">
@@ -1157,7 +1179,7 @@ function SettingsView() {
       {/* Configuration history */}
       <div className="px-4 mt-4 mb-6 animate-fade-up" style={{ animationDelay: "300ms" }}>
         <div className="flex items-center gap-2 mb-3">
-          <Clock size={14} className="text-[var(--text-primary)]" />
+          <Clock size={16} className="text-[var(--text-primary)]" />
           <p className="text-sm font-semibold text-[var(--text-primary)]">Configuration history</p>
         </div>
         <div className="flex flex-col gap-2">
@@ -1189,8 +1211,8 @@ type ChatMessage = {
 function TypingIndicator() {
   return (
     <div className="flex items-start gap-2 px-4 py-3 animate-fade-up">
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--very-light-green)] text-[var(--light-green)]">
-        <Zap size={14} />
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--very-light-green)] text-[var(--light-green)]">
+        <Zap size={16} />
       </div>
       <div className="flex items-center gap-1 rounded-2xl bg-[var(--very-light-gray)] px-4 py-3">
         <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--text-muted)] [animation-delay:0ms]" />
@@ -1207,8 +1229,8 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
   return (
     <div className={`flex items-start gap-2 px-4 py-1.5 animate-fade-up ${isUser ? "flex-row-reverse" : ""}`}>
       {!isUser && (
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--very-light-green)] text-[var(--light-green)]">
-          <Zap size={14} />
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--very-light-green)] text-[var(--light-green)]">
+          <Zap size={16} />
         </div>
       )}
       <div
@@ -1253,7 +1275,7 @@ function ChatHistoryPanel({
     <div className="absolute inset-0 z-30 flex flex-col bg-white animate-in">
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--light-gray)] px-4">
         <h2 className="text-base font-semibold text-[var(--text-primary)]">Chat history</h2>
-        <button type="button" aria-label="Close history" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)]">
+        <button type="button" aria-label="Close history" onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--text-primary)] hover:bg-[var(--very-light-gray)]">
           <X size={16} />
         </button>
       </div>
@@ -1449,7 +1471,7 @@ function AIChatView({
               </span>
               <button type="button" className="flex items-center gap-0.5 rounded-2xl bg-[var(--very-light-gray)] px-1.5 py-[3px] text-sm font-medium tracking-[0.14px] text-[var(--medium-gray)]">
                 Metrics
-                <ChevronDown size={14} className="text-[var(--medium-gray)]" />
+                <ChevronDown size={16} className="text-[var(--medium-gray)]" />
               </button>
               <button
                 type="button"
@@ -1461,7 +1483,7 @@ function AIChatView({
                 }`}
               >
                 Suggestions
-                <ChevronDown size={14} />
+                <ChevronDown size={16} />
               </button>
             </div>
             <button
@@ -1469,7 +1491,7 @@ function AIChatView({
               aria-label="Send message"
               onClick={handleSubmit}
               disabled={!hasText}
-              className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full transition-colors ${
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors ${
                 hasText ? "bg-[var(--light-green)] active:scale-95" : "bg-[#a9a9a6]"
               }`}
             >
@@ -1539,7 +1561,7 @@ export default function InsightsPage() {
 
       {/* Header */}
       <header className="flex w-full shrink-0 items-center justify-between px-4 pb-2">
-        <button type="button" aria-label="Menu" className="flex h-10 w-10 items-center justify-center rounded-full hover:opacity-80">
+        <button type="button" aria-label="Menu" className="flex h-11 w-11 items-center justify-center rounded-full hover:opacity-80">
           <MenuIcon />
         </button>
         <div className="flex items-center gap-2 py-[3px]">
@@ -1587,14 +1609,14 @@ export default function InsightsPage() {
             <div />
           ) : (
             <div className="flex items-center gap-2">
-              <button type="button" aria-label="New chat" onClick={handleNewChat} className="flex h-[34px] w-[34px] items-center justify-center rounded-[4px] border border-[var(--light-gray)] text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
+              <button type="button" aria-label="New chat" onClick={handleNewChat} className="flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--light-gray)] text-[var(--text-primary)] hover:bg-[var(--very-light-gray)] active:scale-95 transition-all">
                 <Edit size={16} />
               </button>
               <button
                 type="button"
                 aria-label="Chat history"
                 onClick={() => setShowChatHistory(!showChatHistory)}
-                className={`flex h-[34px] w-[34px] items-center justify-center rounded-[4px] border transition-all active:scale-95 ${
+                className={`flex h-11 w-11 items-center justify-center rounded-lg border transition-all active:scale-95 ${
                   showChatHistory
                     ? "border-[var(--light-green)] bg-[var(--very-light-green)] text-[var(--light-green)]"
                     : "border-[var(--light-gray)] text-[var(--text-primary)] hover:bg-[var(--very-light-gray)]"
